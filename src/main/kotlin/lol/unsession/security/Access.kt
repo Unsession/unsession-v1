@@ -1,9 +1,10 @@
 package lol.unsession.security
 
+/**
+ * ПОРЯДОК ИМЕЕТ ЗНАЧЕНИЕ
+ * */
 enum class Access {
     BRB, // Big Red Button
-
-    G, // general
 
     HW, // homeworks
     HW_A, // homeworks adding
@@ -24,30 +25,7 @@ enum class Access {
     U_RM, // users removing
     U_B, // users blocking
     U_RC, // users roles changing
-    U_IE; // users info editing
+    U_IE, // users info editing
 
-    companion object {
-        fun getAccessCategory(byte: Byte): Access {
-            return Access.entries[byte.toInt()]
-        }
-
-        fun serialize(roles: Set<String>): BooleanArray {
-            val bits = BooleanArray(Access.entries.size)
-            for (role in roles) {
-                val access = Access.valueOf(role)
-                bits[access.ordinal] = true
-            }
-            return bits
-        }
-
-        fun deserialize(bits: BooleanArray): Set<Access> {
-            val roles = mutableSetOf<Access>()
-            for (i in bits.indices) {
-                if (bits[i]) {
-                    roles.add(Access.entries[i])
-                }
-            }
-            return roles
-        }
-    }
+    SS, // superuser
 }

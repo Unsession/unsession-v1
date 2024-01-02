@@ -1,21 +1,56 @@
 package lol.unsession.security.user
 
+import kotlinx.datetime.Clock
+import kotlinx.serialization.Serializable
+import lol.unsession.db.UnsessionSchema
+import lol.unsession.db.models.UserDto
 import lol.unsession.security.Access
+import org.jetbrains.exposed.sql.ResultRow
 
-class User (
+@Serializable
+class User(
     val id: Int,
     val name: String,
-    val email: String,
+    var userLoginData: UserLoginData?,
     val permissions: HashSet<Access>,
     val roleName: String,
-    val isBanned: Boolean,
-    val bannedReason: String,
-    val bannedUntil: Int,
+    var banData: BanData?,
     val created: Int,
     val lastLogin: Int,
     val lastIp: String,
 ) {
+
+    @Serializable
+    data class UserLoginData(
+        val username: String,
+        val email: String,
+        val password: String,
+        val salt: String? = null,
+    )
+
+    @Serializable
+    data class BanData(
+        val bannedUntil: Int,
+        val bannedReason: String,
+    )
+
+    val isBanned: Boolean
+        get() {
+            if (this.banData == null) return false
+            if (this.banData!!.bannedUntil < Clock.System.now().epochSeconds.toInt()) return false
+            return true
+        }
+
+    fun clearLoginData() {
+        this.userLoginData = null
+    }
+
+    fun clearBanData() {
+        this.banData = null
+    }
+
     fun hasAccess(access: Access): Boolean {
+        if (isBanned) return false
         return this.permissions.contains(access)
     }
 
@@ -23,23 +58,22 @@ class User (
         return this.permissions.containsAll(access)
     }
 
-    fun addAccess(access: Access) {
-        this.permissions.add(access)
-    }
-
-    fun removeAccess(access: Access) {
-        this.permissions.remove(access)
-    }
-
-    fun checkPermission(access: Access, action: () -> Unit, onFailure: () -> Unit) {
-        if (hasAccess(access)) {
-            action()
-        }
-    }
-
-    fun checkPermission(access: Collection<Access>, action: () -> Unit, onFailure: () -> Unit) {
-        if (hasAccess(access)) {
-            action()
+    companion object {
+        fun ResultRow.toUser(permission: HashSet<Access>): UserDto {
+            return UserDto(
+                this[UnsessionSchema.Users.id],
+                this[UnsessionSchema.Users.username],
+                this[UnsessionSchema.Users.email],
+                this[UnsessionSchema.Users.password],
+                this[UnsessionSchema.Users.salt],
+                permission.map { it.name },
+                this[UnsessionSchema.Users.roleName],
+                this[UnsessionSchema.Users.bannedReason],
+                this[UnsessionSchema.Users.bannedUntil],
+                this[UnsessionSchema.Users.created],
+                this[UnsessionSchema.Users.last_login],
+                this[UnsessionSchema.Users.last_ip],
+            )
         }
     }
 }

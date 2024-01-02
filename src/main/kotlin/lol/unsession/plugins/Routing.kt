@@ -2,35 +2,63 @@ package lol.unsession.plugins
 
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.auth.*
+import io.ktor.server.plugins.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.runBlocking
-import lol.unsession.createFileAndWrite
-import java.io.File
+import lol.unsession.db.UsersRepositoryImpl
+import lol.unsession.security.user.User
+import lol.unsession.utils.getLogger
+
+val logger = getLogger("Routing")
 
 fun Application.configureRouting() {
+    val usersRepo = UsersRepositoryImpl()
     install(StatusPages) {
         exception<Throwable> { call, cause ->
             call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
         }
     }
-    install(CORS) {
-        allowMethod(HttpMethod.Post)
-        anyHost()
-    }
+//    install(CORS) {
+//        allowMethod(HttpMethod.Post)
+//        allowMethod(HttpMethod.Get)
+//        allowHeaders {
+//            it.matches(".*".toRegex())
+//        }
+//        anyHost()
+//    }
     routing {
         get("/test") {
             call.respondText("Hello, world!")
         }
         route("/parser") {
             post("/sdo/answers") {
-                createFileAndWrite("S:\\Projects\\Intelij\\unsessionserver\\src\\main\\kotlin\\lol\\unsession\\parsers\\sdo.html") {
-                    runBlocking {
-                        it.writeText(call.receiveText())
-                    }
+                call.respondText("Hello, world!")
+            }
+        }
+        post("/register") {
+            val loginData = call.receive<User.UserLoginData>()
+
+            usersRepo.tryRegisterUser(loginData, call.request.origin.remoteHost, onSuccess = {
+                val token = createToken(it)
+                logger.info("Registered user ${loginData.username}; ${call.request.origin.remoteHost}")
+                call.respond(hashMapOf("token" to token))
+            }, usernameExists = {
+                logger.error("Failed to register user ${loginData.username}; ${call.request.origin.remoteHost} [user-username-exists]")
+                call.respond(HttpStatusCode.Conflict)
+            }, userExists = {
+                logger.error("Failed to register user ${loginData.username}; ${call.request.origin.remoteHost} [user-id-exists]")
+                call.respond(HttpStatusCode.Conflict)
+            }, onFailure = {
+                logger.error("Failed to register user ${loginData.username}; ${call.request.origin.remoteHost}")
+            })
+        }
+        authenticate("user-auth") {
+            route("/auth") {
+                get("/test") {
+                    call.respondText("Hello, world!")
                 }
             }
         }

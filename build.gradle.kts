@@ -6,8 +6,6 @@ val exposed_version: String by project
 val h2_version: String by project
 val postgresql_version: String by project
 val koin_version: String by project
-val ksoup_version: String by project
-
 plugins {
     kotlin("jvm") version "1.9.22"
     application
@@ -22,6 +20,10 @@ application {
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
+
+    val test by tasks.getting(Test::class) {
+        useJUnitPlatform { }
+    }
 }
 
 repositories {
@@ -45,6 +47,8 @@ dependencies {
     implementation("io.ktor:ktor-server-netty:$ktor_version")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("io.ktor:ktor-server-cors-jvm:3.0.0-beta-1")
+    implementation("io.ktor:ktor-server-auth-jvm:3.0.0-beta-1")
+    implementation("io.ktor:ktor-server-auth-jwt-jvm:3.0.0-beta-1")
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
@@ -52,6 +56,8 @@ dependencies {
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
 
     implementation("io.ktor:ktor-server-cors-jvm:$ktor_version")
+    testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
 
-    implementation("com.fleeksoft.ksoup:ksoup:$ksoup_version")
+    implementation("io.ktor:ktor-server-auth:$ktor_version")
+    implementation("io.ktor:ktor-server-auth-jwt:$ktor_version")
 }

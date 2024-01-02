@@ -3,18 +3,10 @@ package lol.unsession.security
 import lol.unsession.security.Access.*
 
 data class AccountRole(
-    val roleName: String,
-    val access: HashSet<Access>,
+    val name: String,
+    val permissions: HashSet<Access>,
     val description: String,
-) {
-    fun hasAccess(access: Access): Boolean {
-        return this.access.contains(access)
-    }
-
-    fun addAccess(access: Access) {
-        this.access.add(access)
-    }
-}
+)
 
 val userP = setOf(
     TE,
@@ -38,7 +30,7 @@ val adminP = setOf(
     U_RC
 ) + pUserP
 
-enum class Roles(roleData: AccountRole) {
+enum class Roles(val roleData: AccountRole) {
     Superuser(
         AccountRole(
             "Superuser",
