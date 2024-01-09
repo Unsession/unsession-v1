@@ -1,11 +1,11 @@
-package lol.unsession.db
+package lol.unsession.db.repo
 
 import kotlinx.datetime.Clock
 import lol.unsession.db.UnsessionSchema.*
 import lol.unsession.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
-import lol.unsession.security.Roles
+import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
 import lol.unsession.utils.getLogger
@@ -59,8 +59,9 @@ class UsersRepositoryImpl : UsersDao {
                     .select { Users.id eq id }
                     .firstOrNull()!!
                 permissions = Users
+                    .innerJoin(UsersPermissions)
                     .innerJoin(Permissions)
-                    .select { Users.id eq id }
+                    .select { Users.id eq user[Users.id] }
                     .map {
                         it[Permissions.name]
                     }
@@ -160,20 +161,20 @@ class UsersRepositoryImpl : UsersDao {
         userExists: suspend () -> Unit,
         onFailure: suspend () -> Unit
     ): Boolean {
-        checkEmailExists(userLoginData.email).let {
-            if (it) {
-                userExists()
-                onFailure()
-                return false
-            }
-        }
-        checkUsernameExists(userLoginData.username).let {
-            if (it) {
-                usernameExists()
-                onFailure()
-                return false
-            }
-        }
+//        checkEmailExists(userLoginData.email).let {
+//            if (it) {
+//                userExists()
+//                onFailure()
+//                return false
+//            }
+//        }
+//        checkUsernameExists(userLoginData.username).let {
+//            if (it) {
+//                usernameExists()
+//                onFailure()
+//                return false
+//            }
+//        }
         val newUser = registerUser(userLoginData, ip)
         onSuccess(newUser)
         getLogger("Auth").info("Registered user ${userLoginData.username} (${userLoginData.email})")

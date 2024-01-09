@@ -3,9 +3,9 @@ val kotlin_version: String by project
 val logback_version: String by project
 
 val exposed_version: String by project
-val h2_version: String by project
 val postgresql_version: String by project
 val koin_version: String by project
+
 plugins {
     kotlin("jvm") version "1.9.22"
     application
@@ -51,6 +51,7 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt-jvm:3.0.0-beta-1")
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
 
     implementation("io.insert-koin:koin-ktor:$koin_version")
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
@@ -60,4 +61,7 @@ dependencies {
 
     implementation("io.ktor:ktor-server-auth:$ktor_version")
     implementation("io.ktor:ktor-server-auth-jwt:$ktor_version")
+
+    implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
+    testImplementation("io.ktor:ktor-server-test-host-jvm:3.0.0-beta-1")
 }

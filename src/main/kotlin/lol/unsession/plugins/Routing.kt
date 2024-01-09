@@ -3,12 +3,13 @@ package lol.unsession.plugins
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import lol.unsession.db.UsersRepositoryImpl
+import lol.unsession.db.repo.UsersRepositoryImpl
 import lol.unsession.security.user.User
 import lol.unsession.utils.getLogger
 
@@ -21,17 +22,9 @@ fun Application.configureRouting() {
             call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
         }
     }
-//    install(CORS) {
-//        allowMethod(HttpMethod.Post)
-//        allowMethod(HttpMethod.Get)
-//        allowHeaders {
-//            it.matches(".*".toRegex())
-//        }
-//        anyHost()
-//    }
     routing {
-        get("/test") {
-            call.respondText("Hello, world!")
+        get("/") {
+            call.respondText("It works!")
         }
         route("/parser") {
             post("/sdo/answers") {
@@ -40,7 +33,6 @@ fun Application.configureRouting() {
         }
         post("/register") {
             val loginData = call.receive<User.UserLoginData>()
-
             usersRepo.tryRegisterUser(loginData, call.request.origin.remoteHost, onSuccess = {
                 val token = createToken(it)
                 logger.info("Registered user ${loginData.username}; ${call.request.origin.remoteHost}")
@@ -55,12 +47,19 @@ fun Application.configureRouting() {
                 logger.error("Failed to register user ${loginData.username}; ${call.request.origin.remoteHost}")
             })
         }
+
         authenticate("user-auth") {
-            route("/auth") {
-                get("/test") {
+            get("/authtest") {
                     call.respondText("Hello, world!")
-                }
             }
+
+            get("/user") {
+                val user = call.authentication.principal<JWTPrincipal>()!!.payload
+                val userDto = usersRepo.getUser(user.getClaim("userId").asInt())!!
+                call.respond(userDto)
+            }
+
+
         }
     }
 }

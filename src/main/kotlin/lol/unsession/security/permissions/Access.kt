@@ -1,4 +1,4 @@
-package lol.unsession.security
+package lol.unsession.security.permissions
 
 /**
  * ПОРЯДОК ИМЕЕТ ЗНАЧЕНИЕ

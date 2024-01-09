@@ -4,7 +4,7 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import lol.unsession.db.UnsessionSchema
 import lol.unsession.db.models.UserDto
-import lol.unsession.security.Access
+import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.ResultRow
 
 @Serializable

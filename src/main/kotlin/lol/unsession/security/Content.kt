@@ -1,6 +1,6 @@
 package lol.unsession.security
 
-import lol.unsession.db.models.UserDto
+import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
 
 interface Content {

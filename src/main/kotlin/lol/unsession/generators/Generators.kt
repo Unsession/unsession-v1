@@ -1,9 +1,11 @@
 package lol.unsession.generators
 
+import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
+import java.util.*
 
 val user = UserDto(
     id = 1,

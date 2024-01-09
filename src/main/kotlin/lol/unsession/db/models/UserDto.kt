@@ -1,7 +1,7 @@
 package lol.unsession.db.models
 
 import kotlinx.serialization.Serializable
-import lol.unsession.security.Access
+import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
 
 @Serializable

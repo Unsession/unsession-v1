@@ -2,7 +2,8 @@ package lol.unsession.db
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.Clock
-import lol.unsession.security.Access
+import lol.unsession.db.UnsessionSchema.Users.uniqueIndex
+import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.match
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -16,7 +17,7 @@ class UnsessionSchema(private val database: Database) {
     object Users : Table("Users") {
         val id = integer("id").autoIncrement("users_id_seq").uniqueIndex()
         val username = varchar("username", 64)
-        val email = varchar("email", 64).uniqueIndex().check {
+        val email = varchar("email", 64).check {
             it like "%@niuitmo.ru" or (it like "%@itmo.ru")
         }
 
@@ -39,7 +40,7 @@ class UnsessionSchema(private val database: Database) {
     }
 
     object Permissions : Table() {
-        val id = integer("id").autoIncrement()
+        val id = integer("id").autoIncrement().uniqueIndex()
         val name = varchar("name", 5).uniqueIndex()
         val description = varchar("description", 255)
 
@@ -60,15 +61,15 @@ class UnsessionSchema(private val database: Database) {
 
     object UsersPermissions : Table() {
         val id = integer("id").autoIncrement().uniqueIndex()
-        val userId = integer("user").references(Users.id)
-        val permissionId = integer("permission").references(Permissions.id)
-        val granted = integer("timestamp").default(Clock.System.now().epochSeconds.toInt())
-        //override val primaryKey = PrimaryKey(userId, permissionId)
+        val userId = integer("user_id").references(Users.id)
+        val permissionId = integer("permission_id").references(Permissions.id)
+
+        override val primaryKey = PrimaryKey(id)
     }
 
     object Codes : Table() {
-        val id = integer("id").autoIncrement()
-        val creator = integer("creator").references(Users.id)
+        val id = integer("id").autoIncrement().uniqueIndex()
+        val creator = integer("creator_id").references(Users.id)
 
         val code = varchar("code", 4) //.default(generalRandom.nextBits(4).toString())
         val activations = integer("activations").default(0)
@@ -78,29 +79,24 @@ class UnsessionSchema(private val database: Database) {
         override val primaryKey = PrimaryKey(id)
     }
 
-    object Subject : Table() {
-        val id = integer("id").autoIncrement()
-        val name = varchar("name", 128)
-
-        override val primaryKey = PrimaryKey(id)
-    }
-
     object Teacher : Table() {
         val id = integer("id").check("check_global_person_id") { it lessEq 999999 and (it greaterEq 100000) }
             .uniqueIndex("global_person_id")
-        val name = varchar("full_name", 128)
-        val email = varchar("email", 64).match("""^[a-zA-Z0-9._%+-]+@(niuitmo\.ru|itmo\.ru)$""")
-        val subject = integer("subject").references(Subject.id)
+        val name = varchar("full_name", 256)
+        val email = varchar("email", 64).check { it like "%@niuitmo.ru" or (it like "%@itmo.ru") }
+            .nullable()
+        val department = varchar("department", 128)
 
         override val primaryKey = PrimaryKey(id)
     }
 
     object PersonalRating : Table() {
-        val id = integer("id").autoIncrement()
+        val id = integer("id").autoIncrement().uniqueIndex()
         val ratingId = integer("ratingId").references(TeacherRating.id)
 
         val kindness_rating =
-            integer("kindness_rating").check("check_kindness_rating") { it greaterEq 0 and (it lessEq 5) }.nullable()
+            integer("kindness_rating").check("check_kindness_rating") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
         val responsibility_rating =
             integer("responsibility_rating").check("check_responsibility_rating") { it greaterEq 0 and (it lessEq 5) }
                 .nullable()
@@ -108,23 +104,27 @@ class UnsessionSchema(private val database: Database) {
             integer("individuality_rating").check("check_individuality_rating") { it greaterEq 0 and (it lessEq 5) }
                 .nullable()
         val humor_rating =
-            integer("humor_rating").check("check_humor_rating") { it greaterEq 0 and (it lessEq 5) }.nullable()
+            integer("humor_rating").check("check_humor_rating") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
 
         override val primaryKey = PrimaryKey(id)
     }
 
     object TeacherRating : Table() {
-        val id = integer("id").autoIncrement()
+        val id = integer("id").autoIncrement().uniqueIndex()
         val user = integer("user").references(Users.id)
         val teacher = integer("teacher").references(Teacher.id)
 
         val global_rating = integer("global_rating").check("check_global_rating") { it greaterEq 0 and (it lessEq 5) }
         val labs_rating =
-            integer("labs_rating").check("check_labs_rating") { it greaterEq 0 and (it lessEq 5) }.nullable()
+            integer("labs_rating").check("check_labs_rating") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
         val hw_rating =
-            integer("homework_rating").check("check_hw_rating") { it greaterEq 0 and (it lessEq 5) }.nullable()
+            integer("homework_rating").check("check_hw_rating") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
         val exam_rating =
-            integer("exam_rating").check("check_exam_rating") { it greaterEq 0 and (it lessEq 5) }.nullable()
+            integer("exam_rating").check("check_exam_rating") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
 
         val comment = varchar("comment", 1024).nullable()
         val created = integer("created").default(Clock.System.now().epochSeconds.toInt())
@@ -136,7 +136,6 @@ class UnsessionSchema(private val database: Database) {
         transaction(database) {
             SchemaUtils.create(Users)
             SchemaUtils.create(Codes)
-            SchemaUtils.create(Subject)
             SchemaUtils.create(Teacher)
             SchemaUtils.create(PersonalRating)
             SchemaUtils.create(TeacherRating)
