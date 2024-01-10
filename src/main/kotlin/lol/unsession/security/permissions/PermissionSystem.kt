@@ -9,25 +9,24 @@ data class AccountRole(
 )
 
 val userP = setOf(
-    TE,
-    TE_R
+    Teachers,
+    TeachersReviewing
 )
 val vUserP = setOf(
-    TE_RE,
-    HW,
-    HW_A,
-    T,
-    T_R
+    TeachersReviewing,
+    Homeworks,
+    HomeworksAdding,
+    Tests,
+    TestsRating
 ) + userP
 val pUserP = setOf(
-    T_S,
-    T_AN
+    TestAnswers
 ) + vUserP
 val adminP = setOf(
-    U,
-    U_A,
-    U_B,
-    U_RC
+    Users,
+    UsersAdding,
+    UsersBlocking,
+    UsersRolesChanging
 ) + pUserP
 
 enum class Roles(val roleData: AccountRole) {

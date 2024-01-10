@@ -2,10 +2,8 @@ package lol.unsession.db
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.Clock
-import lol.unsession.db.UnsessionSchema.Users.uniqueIndex
 import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.match
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.random.Random
@@ -31,8 +29,8 @@ class UnsessionSchema(private val database: Database) {
 
         val created = integer("created")
 
-        val last_login = integer("last_login")
-        val last_ip = varchar("last_ip", 15)
+        val lastLogin = integer("last_login")
+        val lastIp = varchar("last_ip", 15)
 
         val referer = integer("referer").references(id).nullable()
 
@@ -41,7 +39,7 @@ class UnsessionSchema(private val database: Database) {
 
     object Permissions : Table() {
         val id = integer("id").autoIncrement().uniqueIndex()
-        val name = varchar("name", 5).uniqueIndex()
+        val name = varchar("name", 64).uniqueIndex()
         val description = varchar("description", 255)
 
         override val primaryKey = PrimaryKey(id)
@@ -90,40 +88,32 @@ class UnsessionSchema(private val database: Database) {
         override val primaryKey = PrimaryKey(id)
     }
 
-    object PersonalRating : Table() {
-        val id = integer("id").autoIncrement().uniqueIndex()
-        val ratingId = integer("ratingId").references(TeacherRating.id)
-
-        val kindness_rating =
-            integer("kindness_rating").check("check_kindness_rating") { it greaterEq 0 and (it lessEq 5) }
-                .nullable()
-        val responsibility_rating =
-            integer("responsibility_rating").check("check_responsibility_rating") { it greaterEq 0 and (it lessEq 5) }
-                .nullable()
-        val individuality_rating =
-            integer("individuality_rating").check("check_individuality_rating") { it greaterEq 0 and (it lessEq 5) }
-                .nullable()
-        val humor_rating =
-            integer("humor_rating").check("check_humor_rating") { it greaterEq 0 and (it lessEq 5) }
-                .nullable()
-
-        override val primaryKey = PrimaryKey(id)
-    }
-
-    object TeacherRating : Table() {
+    object TeacherReview : Table() {
         val id = integer("id").autoIncrement().uniqueIndex()
         val user = integer("user").references(Users.id)
         val teacher = integer("teacher").references(Teacher.id)
 
-        val global_rating = integer("global_rating").check("check_global_rating") { it greaterEq 0 and (it lessEq 5) }
+        val global_rating = integer("global_review").check("check_global_review") { it greaterEq 0 and (it lessEq 5) }
         val labs_rating =
-            integer("labs_rating").check("check_labs_rating") { it greaterEq 0 and (it lessEq 5) }
+            integer("labs_review").check("check_labs_review") { it greaterEq 0 and (it lessEq 5) }
                 .nullable()
         val hw_rating =
-            integer("homework_rating").check("check_hw_rating") { it greaterEq 0 and (it lessEq 5) }
+            integer("homework_review").check("check_hw_review") { it greaterEq 0 and (it lessEq 5) }
                 .nullable()
         val exam_rating =
-            integer("exam_rating").check("check_exam_rating") { it greaterEq 0 and (it lessEq 5) }
+            integer("exam_review").check("check_exam_review") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
+        val kindness_rating =
+            integer("kindness_review").check("check_kindness_review") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
+        val responsibility_rating =
+            integer("responsibility_review").check("check_responsibility_review") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
+        val individuality_rating =
+            integer("individuality_review").check("check_individuality_review") { it greaterEq 0 and (it lessEq 5) }
+                .nullable()
+        val humor_rating =
+            integer("humor_review").check("check_humor_review") { it greaterEq 0 and (it lessEq 5) }
                 .nullable()
 
         val comment = varchar("comment", 1024).nullable()
@@ -137,8 +127,7 @@ class UnsessionSchema(private val database: Database) {
             SchemaUtils.create(Users)
             SchemaUtils.create(Codes)
             SchemaUtils.create(Teacher)
-            SchemaUtils.create(PersonalRating)
-            SchemaUtils.create(TeacherRating)
+            SchemaUtils.create(TeacherReview)
             SchemaUtils.create(Permissions)
             Permissions.insertPermissions()
             SchemaUtils.create(UsersPermissions)
