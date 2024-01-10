@@ -77,8 +77,8 @@ class UsersRepositoryImpl : UsersDao {
                 user[Users.bannedReason],
                 user[Users.bannedUntil],
                 user[Users.created],
-                user[Users.last_login],
-                user[Users.last_ip],
+                user[Users.lastLogin],
+                user[Users.lastIp],
             ).toUser()
         } catch (e: Exception) {
             return null
@@ -93,7 +93,7 @@ class UsersRepositoryImpl : UsersDao {
                 user = Users
                     .select { Users.email eq email }
                     .singleOrNull() ?: throw Exception("User not found")
-                getLogger("UsersRepo").info("requestedUser: ${user[Users.id]} ${user[Users.username]} ${user[Users.email]} ${user[Users.password]} ${user[Users.salt]} ${user[Users.roleName]} ${user[Users.bannedReason]} ${user[Users.bannedUntil]} ${user[Users.created]} ${user[Users.last_login]} ${user[Users.last_ip]}}")
+                getLogger("UsersRepo").info("requestedUser: ${user[Users.id]} ${user[Users.username]} ${user[Users.email]} ${user[Users.password]} ${user[Users.salt]} ${user[Users.roleName]} ${user[Users.bannedReason]} ${user[Users.bannedUntil]} ${user[Users.created]} ${user[Users.lastLogin]} ${user[Users.lastIp]}}")
                 if (withPermissions) {
                     permissions = Users
                         .innerJoin(UsersPermissions)
@@ -115,8 +115,8 @@ class UsersRepositoryImpl : UsersDao {
                     user[Users.bannedReason],
                     user[Users.bannedUntil],
                     user[Users.created],
-                    user[Users.last_login],
-                    user[Users.last_ip],
+                    user[Users.lastLogin],
+                    user[Users.lastIp],
                 ).toUser()
             }
         } catch (e: Exception) {
@@ -196,8 +196,8 @@ class UsersRepositoryImpl : UsersDao {
                 it[bannedReason] = null
                 it[bannedUntil] = null
                 it[created] = Clock.System.now().epochSeconds.toInt()
-                it[last_login] = Clock.System.now().epochSeconds.toInt()
-                it[last_ip] = ip
+                it[lastLogin] = Clock.System.now().epochSeconds.toInt()
+                it[lastIp] = ip
             }
         }
         val newUser = getUser(userLoginData.email, withPermissions = false)

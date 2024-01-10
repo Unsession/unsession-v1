@@ -4,28 +4,26 @@ package lol.unsession.security.permissions
  * ПОРЯДОК ИМЕЕТ ЗНАЧЕНИЕ
  * */
 enum class Access {
-    BRB, // Big Red Button
+    BigRedButton, // Big Red Button
 
-    HW, // homeworks
-    HW_A, // homeworks adding
+    Homeworks, // homeworks
+    HomeworksAdding, // homeworks adding
 
-    T, // tests
-    T_A, // tests adding
-    T_R, // tests rating
-    T_AN, // tests answers
-    T_S, // tests answers
+    Tests, // tests
+    TestsAdding, // tests adding
+    TestsRating, // tests rating
+    TestAnswers, // tests answers
 
-    TE, // teachers
-    TE_A, // teachers adding
-    TE_R, // teachers rating
-    TE_RE, // teachers reviewing
+    Teachers, // teachers
+    TeachersAdding, // teachers adding
+    TeachersReviewing, // teachers reviewing
 
-    U, // users
-    U_A, // users adding
-    U_RM, // users removing
-    U_B, // users blocking
-    U_RC, // users roles changing
-    U_IE, // users info editing
+    Users, // users
+    UsersAdding, // users adding
+    UsersRemoving, // users removing
+    UsersBlocking, // users blocking
+    UsersRolesChanging, // users roles changing
+    UsersProfileInfoEditing, // users profile info editing
 
     SS, // superuser
 }

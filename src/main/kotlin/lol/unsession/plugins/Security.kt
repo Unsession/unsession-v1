@@ -67,7 +67,7 @@ fun Application.configureSecurity() {
 
             val token = createToken(user)
 
-            call.respond(hashMapOf("token" to token))
+            call.respond(hashMapOf("token" to token, "user" to user))
         }
     }
 }
@@ -97,14 +97,15 @@ fun ApplicationCall.getPermissions(): HashSet<Access>? {
     return getPermissionsFromToken(token)
 }
 
-suspend fun ApplicationCall.verify(access: Access) {
-    val permissions = this.getPermissions()
+suspend fun RoutingContext.verify(vararg access: Access) {
+    val call = this.call
+    val permissions = call.getPermissions()
     if (permissions == null) {
-        this.respond(HttpStatusCode.Forbidden)
+        call.respond(HttpStatusCode.Forbidden)
         return
     }
-    if (!permissions.contains(access)) {
-        this.respond(HttpStatusCode.Forbidden)
+    if (!permissions.containsAll(access.toList())) {
+        call.respond(HttpStatusCode.Forbidden)
         return
     }
 }

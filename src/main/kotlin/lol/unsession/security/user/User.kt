@@ -71,8 +71,8 @@ class User(
                 this[UnsessionSchema.Users.bannedReason],
                 this[UnsessionSchema.Users.bannedUntil],
                 this[UnsessionSchema.Users.created],
-                this[UnsessionSchema.Users.last_login],
-                this[UnsessionSchema.Users.last_ip],
+                this[UnsessionSchema.Users.lastLogin],
+                this[UnsessionSchema.Users.lastIp],
             )
         }
     }
