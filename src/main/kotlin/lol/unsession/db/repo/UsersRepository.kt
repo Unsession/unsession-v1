@@ -11,6 +11,7 @@ import lol.unsession.security.utils.Crypto
 import lol.unsession.utils.getLogger
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
 
 interface UsersDao {
     suspend fun checkUsernameExists(username: String): Boolean
@@ -27,15 +28,15 @@ interface UsersDao {
         userLoginData: User.UserLoginData,
         ip: String,
         onSuccess: suspend (User) -> Unit,
-        usernameExists: suspend () -> Unit,
-        userExists: suspend () -> Unit,
-        onFailure: suspend () -> Unit
+        usernameExists: suspend () -> Unit = {},
+        userExists: suspend () -> Unit = {},
+        onFailure: suspend () -> Unit = {}
     ): Boolean
 
     suspend fun registerUser(userLoginData: User.UserLoginData, ip: String): User?
 }
 
-class UsersRepositoryImpl : UsersDao {
+object UsersRepositoryImpl : UsersDao {
 
     override suspend fun checkUsernameExists(username: String): Boolean {
         return dbQuery {
@@ -92,7 +93,7 @@ class UsersRepositoryImpl : UsersDao {
             return dbQuery {
                 user = Users
                     .select { Users.email eq email }
-                    .singleOrNull() ?: throw Exception("User not found")
+                    .singleOrNull() ?: return@dbQuery null
                 getLogger("UsersRepo").info("requestedUser: ${user[Users.id]} ${user[Users.username]} ${user[Users.email]} ${user[Users.password]} ${user[Users.salt]} ${user[Users.roleName]} ${user[Users.bannedReason]} ${user[Users.bannedUntil]} ${user[Users.created]} ${user[Users.lastLogin]} ${user[Users.lastIp]}}")
                 if (withPermissions) {
                     permissions = Users
@@ -161,20 +162,6 @@ class UsersRepositoryImpl : UsersDao {
         userExists: suspend () -> Unit,
         onFailure: suspend () -> Unit
     ): Boolean {
-//        checkEmailExists(userLoginData.email).let {
-//            if (it) {
-//                userExists()
-//                onFailure()
-//                return false
-//            }
-//        }
-//        checkUsernameExists(userLoginData.username).let {
-//            if (it) {
-//                usernameExists()
-//                onFailure()
-//                return false
-//            }
-//        }
         val newUser = registerUser(userLoginData, ip)
         onSuccess(newUser)
         getLogger("Auth").info("Registered user ${userLoginData.username} (${userLoginData.email})")
@@ -185,10 +172,10 @@ class UsersRepositoryImpl : UsersDao {
     override suspend fun registerUser(userLoginData: User.UserLoginData, ip: String): User {
         val salt = Crypto.generateRandomSalt().toHexString()
         val pwdHash = Crypto.generateHash(userLoginData.password, salt)
-        dbQuery {
+        transaction {
             Users.insert {
                 it[id] = -1
-                it[username] = userLoginData.username
+                it[username] = userLoginData.username!!
                 it[email] = userLoginData.email
                 it[password] = pwdHash
                 it[this.salt] = salt
@@ -200,12 +187,17 @@ class UsersRepositoryImpl : UsersDao {
                 it[lastIp] = ip
             }
         }
-        val newUser = getUser(userLoginData.email, withPermissions = false)
-        val roleSet = setRole(newUser!!.id, Roles.User)
-        if (!roleSet) {
-            throw Exception("Failed to set role for user ${newUser.id}")
+        try {
+            val newUser = getUser(userLoginData.email, withPermissions = false)
+            val roleSet = setRole(newUser!!.id, Roles.User)
+            if (!roleSet) {
+                throw Exception("Failed to set role for user ${newUser.id}")
+            }
+            return newUser
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        return newUser
+        throw Exception("Failed to register user ${userLoginData.username} (${userLoginData.email})")
     }
 
     override suspend fun setRole(id: Int, role: Roles): Boolean {

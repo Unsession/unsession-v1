@@ -22,11 +22,18 @@ class User(
 
     @Serializable
     data class UserLoginData(
-        val username: String,
+        val username: String?,
         val email: String,
         val password: String,
-        val salt: String? = null,
-    )
+        val salt: String? = null
+
+    ) {
+        fun validate(): Boolean {
+            return (email.contains("^[a-zA-Z0-9_.+-]+@(niuitmo.ru|itmo.ru)$".toRegex()) &&
+                    password.length >= 8 &&
+                    username.toString().length >= 4)
+        }
+    }
 
     @Serializable
     data class BanData(

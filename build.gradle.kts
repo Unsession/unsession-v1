@@ -41,6 +41,7 @@ dependencies {
     implementation("io.ktor:ktor-server-call-id-jvm:$ktor_version")
     implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
+    implementation("io.ktor:ktor-client-apache:3.0.0-beta-1")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
     implementation("org.postgresql:postgresql:$postgresql_version")
@@ -49,9 +50,13 @@ dependencies {
     implementation("io.ktor:ktor-server-cors-jvm:3.0.0-beta-1")
     implementation("io.ktor:ktor-server-auth-jvm:3.0.0-beta-1")
     implementation("io.ktor:ktor-server-auth-jwt-jvm:3.0.0-beta-1")
+    implementation("io.ktor:ktor-client-encoding:3.0.0-beta-1")
+    implementation("io.ktor:ktor-client-okhttp-jvm:3.0.0-beta-1")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    implementation("io.ktor:ktor-serialization-gson:$ktor_version")
+    implementation("io.ktor:ktor-serialization-jackson:3.0.0-beta-1")
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
 
     implementation("io.insert-koin:koin-ktor:$koin_version")
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
@@ -64,4 +69,20 @@ dependencies {
 
     implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.0.0-beta-1")
+
+
+
+
+
+    testImplementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
+    testImplementation("org.jetbrains.exposed:exposed-core:$exposed_version")
+    testImplementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
+    testImplementation("org.postgresql:postgresql:$postgresql_version")
+    testImplementation("ch.qos.logback:logback-classic:$logback_version")
+    testImplementation("io.ktor:ktor-client-encoding:3.0.0-beta-1")
+    testImplementation("io.ktor:ktor-client-okhttp-jvm:3.0.0-beta-1")
+    testImplementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    testImplementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+    testImplementation("io.ktor:ktor-serialization-gson:$ktor_version")
+
 }

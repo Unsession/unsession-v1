@@ -1,7 +1,9 @@
 package lol.unsession.db
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import lol.unsession.db.repo.generateTestData
 import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -78,7 +80,7 @@ class UnsessionSchema(private val database: Database) {
     }
 
     object Teacher : Table() {
-        val id = integer("id").check("check_global_person_id") { it lessEq 999999 and (it greaterEq 100000) }
+        val id = integer("id").autoIncrement().check("check_global_person_id") { it lessEq 999999 and (it greaterEq 100000) }
             .uniqueIndex("global_person_id")
         val name = varchar("full_name", 256)
         val email = varchar("email", 64).check { it like "%@niuitmo.ru" or (it like "%@itmo.ru") }
@@ -123,12 +125,12 @@ class UnsessionSchema(private val database: Database) {
     }
 
     init {
+        wipeInitial()
+    }
+
+    fun initial() {
         transaction(database) {
-            SchemaUtils.create(Users)
-            SchemaUtils.create(Codes)
-            SchemaUtils.create(Teacher)
-            SchemaUtils.create(TeacherReview)
-            SchemaUtils.create(Permissions)
+            SchemaUtils.create(Users, Codes, Teacher, TeacherReview, Permissions)
             Permissions.insertPermissions()
             SchemaUtils.create(UsersPermissions)
             exec(
@@ -149,6 +151,42 @@ class UnsessionSchema(private val database: Database) {
                 EXECUTE FUNCTION assign_new_id();
             """.trimIndent()
             )
+        }
+    }
+
+    fun wipeInitial() {
+        transaction(database) {
+            //val schema = Schema("unsession", "postgres", System.getenv("pgpass"))
+            // drop all tables cascade
+            exec("""
+                DROP SCHEMA public CASCADE;
+                CREATE SCHEMA public;
+            """.trimIndent())
+            //SchemaUtils.createSchema(schema)
+            SchemaUtils.create(Users, Codes, Teacher, TeacherReview, Permissions)
+            Permissions.insertPermissions()
+            SchemaUtils.create(UsersPermissions)
+            exec(
+                """
+                CREATE OR REPLACE FUNCTION assign_new_id()
+                RETURNS TRIGGER AS ${'$'}${'$'}
+                BEGIN
+                    IF NEW.id = -1 THEN
+                        NEW.id = nextval('users_id_seq');
+                    END IF;
+                    RETURN NEW;
+                END;
+                ${'$'}${'$'} LANGUAGE plpgsql;
+
+                CREATE OR REPLACE TRIGGER assign_new_id_before_insert
+                BEFORE INSERT ON Users
+                FOR EACH ROW
+                EXECUTE FUNCTION assign_new_id();
+            """.trimIndent()
+            )
+        }
+        runBlocking {
+            generateTestData()
         }
     }
 

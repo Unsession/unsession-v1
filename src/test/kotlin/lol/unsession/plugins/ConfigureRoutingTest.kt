@@ -1,60 +1,62 @@
 package lol.unsession.plugins
 
-import io.kotlintest.matchers.string.shouldMatch
 import io.kotlintest.shouldBe
+import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.application.*
 import io.ktor.server.testing.*
-import io.ktor.util.reflect.*
-import io.ktor.utils.io.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import lol.unsession.db.UnsessionSchema
-import lol.unsession.module
+import io.ktor.util.pipeline.*
 import lol.unsession.security.user.User
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.transactions.transaction
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
+import lol.unsession.test.TestSDK
 
 fun main() = testApplication {
     application {
         configureHTTP()
         configureMonitoring()
+        configureSerialization()
         configureDatabases()
         configureAdministration()
-        configureSerialization()
         configureSecurity()
         configureRouting()
     }
-    client.post("/register") {
-        header(HttpHeaders.ContentType, ContentType.Application.Json)
-        setBody("""
-            {
-              "username": "perfmidssionsuser",
-              "email": "permisfsidons@niuitmo.ru",
-              "password": "0000",
-              "salt": null  
+    val client = HttpClient(OkHttp) {
+        engine {
+            config {
+                followRedirects(true)
             }
-        """.trimIndent())
+        }
+        install(ContentNegotiation) {
+            json()
+        }
+        defaultRequest {
+            header(HttpHeaders.ContentType, ContentType.Application.Json)
+            url("https://localhost:7777/")
+        }
+    }
+    val data = User.UserLoginData(
+        TestSDK.username,
+        TestSDK.email,
+        TestSDK.password
+    )
+    client.post("/register") {
+        setBody(data)
         println("--- $body ---")
     }.apply {
-        this.call.response.status shouldBe HttpStatusCode.OK
-        val token = this.call.response.bodyAsText().drop(10).dropLast(2)
-        this.call.response.bodyAsText() shouldMatch  "\\{\"token\":\".*\"}".toRegex()
-
+        call.response.status shouldBe HttpStatusCode.OK
+        val body = call.response.body<LoginResponse>()
+        body.user.userLoginData!!.email shouldBe data.email
         client.get("/authtest") {
-            header(HttpHeaders.ContentType, ContentType.Application.Json)
-            header(HttpHeaders.Authorization, "Bearer $token")
+            header(HttpHeaders.Authorization, "Bearer ${body.token}")
         }.apply {
-            this.call.response.status shouldBe HttpStatusCode.OK
-            this.call.response.bodyAsText() shouldBe "Hello, world!"
+            call.response.status shouldBe HttpStatusCode.OK
+            call.response.bodyAsText() shouldBe "Hello, world!"
         }
     }
 }

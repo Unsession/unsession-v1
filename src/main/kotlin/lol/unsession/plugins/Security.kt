@@ -12,6 +12,8 @@ import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DateTimePeriod
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import lol.unsession.db.repo.UsersRepositoryImpl
 import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
@@ -22,27 +24,32 @@ import kotlin.collections.HashSet
 import kotlin.time.Duration
 
 fun Application.configureSecurity() {
-    val usersRepo = UsersRepositoryImpl()
+    val usersRepo = UsersRepositoryImpl
     val secret = System.getenv("secret")
     val issuer = System.getenv("jwt.issuer")
 
     install(Authentication) {
         jwt("user-auth") {
+            val logger = getLogger("validator")
             verifier(JWT
                 .require(Algorithm.HMAC512(secret))
                 .withIssuer(issuer)
                 .build())
             validate { credential ->
                 val user = usersRepo.getUser(credential.payload.getClaim("userId").asInt())
+                logger.debug("requested from token: ${user.toString()}")
                 if (credential.payload.getClaim("username").asString() != "" &&
                     user != null &&
                     credential.expiresAt!!.time > Clock.System.now().toEpochMilliseconds()) {
                     JWTPrincipal(credential.payload)
                 } else {
+                    logger.error("verification failed")
                     null
                 }
             }
             challenge { defaultScheme, realm ->
+                logger.error("Даём пользователю по голове и посылаем нах**.401")
+                logger.debug("Token is not valid or has expired; scheme=$defaultScheme realm=\"$realm\", ${this.call.request.headers.entries()}")
                 call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired; scheme=$defaultScheme realm=\"$realm\"")
             }
         }
@@ -67,7 +74,7 @@ fun Application.configureSecurity() {
 
             val token = createToken(user)
 
-            call.respond(hashMapOf("token" to token, "user" to user))
+            call.respond(LoginResponse(token, user))
         }
     }
 }
@@ -78,7 +85,7 @@ fun createToken(user: User): String {
         .withClaim("userId", user.id)
         .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withClaim("username", user.name)
-        .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + 60_000))
+        .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + 10_000))
         .sign(Algorithm.HMAC512(System.getenv("secret")))
 }
 
