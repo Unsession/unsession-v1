@@ -125,7 +125,7 @@ class UnsessionSchema(private val database: Database) {
     }
 
     init {
-        wipeInitial()
+        initial()
     }
 
     fun initial() {
@@ -184,9 +184,6 @@ class UnsessionSchema(private val database: Database) {
                 EXECUTE FUNCTION assign_new_id();
             """.trimIndent()
             )
-        }
-        runBlocking {
-            generateTestData()
         }
     }
 

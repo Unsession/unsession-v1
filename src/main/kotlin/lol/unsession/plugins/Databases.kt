@@ -10,9 +10,9 @@ import org.jetbrains.exposed.sql.*
 fun Application.configureDatabases() {
     val database = Database.connect(
         url = "jdbc:postgresql://localhost:5432/unsession",
-        user = "postgres",
+        user = "vlad",
         driver = "org.postgresql.Driver",
-        password = System.getenv("pgpass")
+        password = "08790Slv!!"
     )
     val schema = UnsessionSchema(database)
 }

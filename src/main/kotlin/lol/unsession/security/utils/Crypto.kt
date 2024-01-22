@@ -18,7 +18,7 @@ object Crypto {
     private const val ALGORITHM = "PBKDF2WithHmacSHA512"
     private const val ITERATIONS = 240_001
     private const val KEY_LENGTH = 512
-    private val SECRET = System.getenv("secret")
+    private val SECRET = "Ejrr]&HrrCr^DLy:xOfx}o5}%3_;x=U\$/J<H<l,4NTIRImVYBTXqB\\BQ(xlJdznP_GnZ3N_7*_FJXERo[nK4<5WByGtJtD}&_PJh}frdL%{N:usAbg5B<9*]]g;s,Ug;payment.key=TC-INVOICE_ee257eb3dc175e6ee5f7a58f89a09954651d7ae67381847f4d0c6c47cb47db1188"//System.getenv("secret")
 
     @OptIn(ExperimentalStdlibApi::class)
     fun generateHash(password: String, salt: String): String {

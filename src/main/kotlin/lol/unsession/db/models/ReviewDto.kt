@@ -2,6 +2,9 @@ package lol.unsession.db.models
 
 import kotlinx.serialization.Serializable
 import lol.unsession.db.UnsessionSchema.TeacherReview
+import lol.unsession.db.models.client.Review
+import lol.unsession.db.repo.TeachersReviewsRepositoryImpl
+import lol.unsession.db.repo.UsersRepositoryImpl
 import org.jetbrains.exposed.sql.ResultRow
 
 @Serializable
@@ -41,5 +44,13 @@ data class ReviewDto (
                 this[TeacherReview.comment],
             )
         }
+    }
+
+    suspend fun toReview(): Review {
+        val users = UsersRepositoryImpl
+        val teachers = TeachersReviewsRepositoryImpl
+        val user = users.getUser(userId)
+        val teacher = teachers.getTeacher(teacherId)
+        return Review.fromReviewAndUser(this, user!!, teacher!!)
     }
 }

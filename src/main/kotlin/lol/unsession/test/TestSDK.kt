@@ -2,7 +2,6 @@ package lol.unsession.test
 
 import lol.unsession.mainDir
 import java.io.File
-import java.nio.file.Paths
 
 object TestData {
     val names = listOf(
@@ -230,7 +229,13 @@ object TestSDK {
         get() = (100000..999999).random()
 
     fun lorem(words: Int): String {
-        val lorem = File("${mainDir}/test/lorem").readText()
+        val lorem = """
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+            Suspendisse at felis felis. Aenean condimentum, erat eget consequat aliquet, magna metus rutrum diam, in dapibus dolor orci eu massa. Mauris ut sem nec massa dapibus blandit. 
+            Aenean rhoncus sapien nec justo imperdiet interdum. Praesent suscipit semper justo et lobortis. 
+            Morbi finibus semper mi, vel mattis tellus mollis sed. Sed sollicitudin, urna id sollicitudin venenatis, diam metus suscipit massa, nec fermentum nunc massa sit amet ex. 
+            Curabitur congue.
+        """.trimIndent()
         val wordsSequence = lorem.split(" ")
         val wordsList = mutableListOf<String>()
         while(wordsList.size < words) {

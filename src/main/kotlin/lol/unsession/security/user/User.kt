@@ -16,8 +16,8 @@ class User(
     val roleName: String,
     var banData: BanData?,
     val created: Int,
-    val lastLogin: Int,
-    val lastIp: String,
+    var lastLogin: Int?,
+    var lastIp: String?,
 ) {
 
     @Serializable
@@ -44,16 +44,13 @@ class User(
     val isBanned: Boolean
         get() {
             if (this.banData == null) return false
-            if (this.banData!!.bannedUntil < Clock.System.now().epochSeconds.toInt()) return false
-            return true
+            return this.banData!!.bannedUntil >= Clock.System.now().epochSeconds.toInt()
         }
 
-    fun clearLoginData() {
-        this.userLoginData = null
-    }
-
-    fun clearBanData() {
-        this.banData = null
+    fun clearPersonalData() {
+        userLoginData = null
+        lastIp = null
+        lastLogin = null
     }
 
     fun hasAccess(access: Access): Boolean {

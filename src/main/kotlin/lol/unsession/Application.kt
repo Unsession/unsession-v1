@@ -4,9 +4,10 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import lol.unsession.plugins.*
-
+import java.net.InetAddress
+// http://51.250.13.148:7575/
 fun main() {
-    embeddedServer(Netty, port = 7777, host = "localhost", module = Application::module)
+    embeddedServer(Netty, port = 5050, host = "10.128.0.30", module = Application::module)
         .start(wait = true)
 }
 

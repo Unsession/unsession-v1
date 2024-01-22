@@ -25,8 +25,8 @@ import kotlin.time.Duration
 
 fun Application.configureSecurity() {
     val usersRepo = UsersRepositoryImpl
-    val secret = System.getenv("secret")
-    val issuer = System.getenv("jwt.issuer")
+    val secret = "Ejrr]&HrrCr^DLy:xOfx}o5}%3_;x=U\$/J<H<l,4NTIRImVYBTXqB\\BQ(xlJdznP_GnZ3N_7*_FJXERo[nK4<5WByGtJtD}&_PJh}frdL%{N:usAbg5B<9*]]g;s,Ug;payment.key=TC-INVOICE_ee257eb3dc175e6ee5f7a58f89a09954651d7ae67381847f4d0c6c47cb47db1188"//System.getenv("secret")
+    val issuer = ""//System.getenv("jwt.issuer")
 
     install(Authentication) {
         jwt("user-auth") {
@@ -36,14 +36,20 @@ fun Application.configureSecurity() {
                 .withIssuer(issuer)
                 .build())
             validate { credential ->
-                val user = usersRepo.getUser(credential.payload.getClaim("userId").asInt())
-                logger.debug("requested from token: ${user.toString()}")
-                if (credential.payload.getClaim("username").asString() != "" &&
-                    user != null &&
-                    credential.expiresAt!!.time > Clock.System.now().toEpochMilliseconds()) {
-                    JWTPrincipal(credential.payload)
-                } else {
-                    logger.error("verification failed")
+                try {
+                    val user = usersRepo.getUser(credential.payload.getClaim("userId").asInt())
+                    logger.debug("requested from token: ${user.toString()}")
+                    if (credential.payload.getClaim("username").asString() != "" &&
+                        user != null &&
+                        credential.expiresAt!!.time > Clock.System.now().toEpochMilliseconds()
+                    ) {
+                        JWTPrincipal(credential.payload)
+                    } else {
+                        logger.error("verification failed")
+                        null
+                    }
+                } catch (e: Exception) {
+                    logger.error("verification failed with exception: ${e.message}")
                     null
                 }
             }
@@ -81,12 +87,12 @@ fun Application.configureSecurity() {
 
 fun createToken(user: User): String {
     return JWT.create()
-        .withIssuer(System.getenv("jwt.issuer"))
+        .withIssuer(System.getenv("jwt_issuer"))
         .withClaim("userId", user.id)
         .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withClaim("username", user.name)
         .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + 10_000))
-        .sign(Algorithm.HMAC512(System.getenv("secret")))
+        .sign(Algorithm.HMAC512("Ejrr]&HrrCr^DLy:xOfx}o5}%3_;x=U\$/J<H<l,4NTIRImVYBTXqB\\BQ(xlJdznP_GnZ3N_7*_FJXERo[nK4<5WByGtJtD}&_PJh}frdL%{N:usAbg5B<9*]]g;s,Ug;payment.key=TC-INVOICE_ee257eb3dc175e6ee5f7a58f89a09954651d7ae67381847f4d0c6c47cb47db1188"/*System.getenv("secret")*/))
 }
 
 fun getPermissionsFromToken(token: String): HashSet<Access> {

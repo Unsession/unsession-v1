@@ -10,6 +10,13 @@ plugins {
     kotlin("jvm") version "1.9.22"
     application
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
+    id("io.ktor.plugin") version "2.3.7"
+}
+
+ktor {
+    fatJar {
+        archiveFileName.set("unsessionhost.jar")
+    }
 }
 
 group = "lol.unsession"
@@ -55,6 +62,9 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("io.ktor:ktor-serialization-gson:$ktor_version")
     implementation("io.ktor:ktor-serialization-jackson:3.0.0-beta-1")
+    implementation("io.ktor:ktor-server-partial-content-jvm:3.0.0-beta-1")
+    implementation("io.ktor:ktor-server-auto-head-response-jvm:3.0.0-beta-1")
+    implementation("io.ktor:ktor-server-freemarker-jvm:3.0.0-beta-1")
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
@@ -69,10 +79,6 @@ dependencies {
 
     implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.0.0-beta-1")
-
-
-
-
 
     testImplementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
     testImplementation("org.jetbrains.exposed:exposed-core:$exposed_version")

@@ -4,9 +4,9 @@ import lol.unsession.Utils
 import lol.unsession.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.db.UnsessionSchema.Teacher
 import lol.unsession.db.UnsessionSchema.TeacherReview
-import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.ReviewDto.Companion.toReviewDto
 import lol.unsession.db.models.TeacherDto
+import lol.unsession.db.models.client.Review
 import lol.unsession.security.user.User
 import lol.unsession.test.TestSDK
 import org.jetbrains.exposed.sql.insert
@@ -15,16 +15,17 @@ import org.jetbrains.exposed.sql.selectAll
 
 interface TeachersRepo {
     suspend fun getTeacher(id: Int): TeacherDto?
-    suspend fun getTeachers(page: Int): List<TeacherDto>
+    suspend fun getTeachers(page: Int, pageSize: Int): List<TeacherDto>
     suspend fun addTeacher(teacher: TeacherDto): TeacherDto?
+    suspend fun searchTeachers(prompt: String, page: Int, pageSize: Int): List<TeacherDto>
 }
 
 interface ReviewsRepository {
-    suspend fun getReview(id: Int): ReviewDto?
-    suspend fun getReviews(page: Int): List<ReviewDto>
-    suspend fun getReviewsByTeacher(teacherId: Int, page: Int): List<ReviewDto>
-    suspend fun getReviewsByUser(userId: Int, page: Int): List<ReviewDto>
-    suspend fun addReview(rating: ReviewDto): Boolean
+    suspend fun getReview(id: Int): Review?
+    suspend fun getReviews(page: Int, pageSize: Int): List<Review>
+    suspend fun getReviewsByTeacher(teacherId: Int, page: Int, pageSize: Int): List<Review>
+    suspend fun getReviewsByUser(userId: Int, page: Int, pageSize: Int): List<Review>
+    suspend fun addReview(rating: Review): Boolean
 }
 
 object TeachersReviewsRepositoryImpl : TeachersRepo, ReviewsRepository {
@@ -41,9 +42,9 @@ object TeachersReviewsRepositoryImpl : TeachersRepo, ReviewsRepository {
         }
     }
 
-    override suspend fun getTeachers(page: Int): List<TeacherDto> {
+    override suspend fun getTeachers(page: Int, pageSize: Int): List<TeacherDto> {
         return dbQuery {
-            Teacher.selectAll().limit(20, (page * 20).toLong()).map {
+            Teacher.selectAll().limit(pageSize, (page * pageSize).toLong()).map {
                 TeacherDto(
                     it[Teacher.id],
                     it[Teacher.name],
@@ -68,41 +69,54 @@ object TeachersReviewsRepositoryImpl : TeachersRepo, ReviewsRepository {
         return teacher
     }
 
-    override suspend fun getReview(id: Int): ReviewDto? {
-        return dbQuery { TeacherReview.select { TeacherReview.id eq id }.firstOrNull()?.toReviewDto() }
-    }
-
-    override suspend fun getReviews(page: Int): List<ReviewDto> {
+    override suspend fun searchTeachers(prompt: String, page: Int, pageSize: Int): List<TeacherDto> {
         return dbQuery {
-            TeacherReview.selectAll().limit(20, (page * 20).toLong()).map {
-                it.toReviewDto()
+            Teacher.select { Teacher.name like "%$prompt%" }.limit(pageSize, (page * pageSize).toLong()).map {
+                TeacherDto(
+                    it[Teacher.id],
+                    it[Teacher.name],
+                    it[Teacher.email],
+                    it[Teacher.department],
+                )
             }
         }
     }
 
-    override suspend fun getReviewsByTeacher(teacherId: Int, page: Int): List<ReviewDto> {
+    override suspend fun getReview(id: Int): Review? {
+        return dbQuery { TeacherReview.select { TeacherReview.id eq id }.firstOrNull()?.toReviewDto()?.toReview() }
+    }
+
+    override suspend fun getReviews(page: Int, pageSize: Int): List<Review> {
+        return dbQuery {
+            TeacherReview.selectAll().limit(pageSize, (page * pageSize).toLong()).map {
+                it.toReviewDto().toReview()
+            }
+        }
+    }
+
+    override suspend fun getReviewsByTeacher(teacherId: Int, page: Int, pageSize: Int): List<Review> {
         return dbQuery {
             TeacherReview.select { TeacherReview.teacher eq teacherId }
-                .limit(20, (page * 20).toLong()).map {
-                    it.toReviewDto()
+                .limit(pageSize, (page * pageSize).toLong()).map {
+                    it.toReviewDto().toReview()
                 }
         }
     }
 
-    override suspend fun getReviewsByUser(userId: Int, page: Int): List<ReviewDto> {
+    override suspend fun getReviewsByUser(userId: Int, page: Int, pageSize: Int): List<Review> {
         return dbQuery {
             TeacherReview.select { TeacherReview.user eq userId }
-                .limit(20, (page * 20).toLong()).map {
-                    it.toReviewDto()
+                .limit(pageSize, (page * pageSize).toLong()).map {
+                    it.toReviewDto().toReview()
                 }
         }
     }
 
-    override suspend fun addReview(rating: ReviewDto): Boolean {
+    override suspend fun addReview(rating: Review): Boolean {
         return dbQuery {
             TeacherReview.insert {
-                it[user] = rating.userId
-                it[teacher] = rating.teacherId
+                it[user] = rating.user.id
+                it[teacher] = rating.teacher.id
                 it[global_rating] = rating.globalRating
                 it[labs_rating] = rating.labsRating
                 it[hw_rating] = rating.hwRating
@@ -118,7 +132,7 @@ object TeachersReviewsRepositoryImpl : TeachersRepo, ReviewsRepository {
     }
 }
 
-suspend fun generateTestData() {
+suspend fun generateTestData(onExecuted: suspend (String) -> Unit) {
     val usersRepo = UsersRepositoryImpl
     val teachersRepo = TeachersReviewsRepositoryImpl
     val teachersId = mutableListOf<Int>()
@@ -139,10 +153,10 @@ suspend fun generateTestData() {
             onSuccess = { user ->
                 repeat(5) {
                     teachersRepo.addReview(
-                        ReviewDto(
+                        Review(
                             null,
-                            user.id,
-                            teachersId.random(),
+                            user,
+                            TeachersReviewsRepositoryImpl.getTeacher(teachersId.random())!!,
                             (1..5).random(),
                             (1..5).random(),
                             (1..5).random(),
@@ -158,6 +172,7 @@ suspend fun generateTestData() {
                         )
                     )
                 }
+                onExecuted("Test data generated successfully")
             }
         )
     }
