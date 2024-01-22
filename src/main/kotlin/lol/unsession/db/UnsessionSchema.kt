@@ -3,8 +3,10 @@ package lol.unsession.db
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import lol.unsession.db.models.UserDto
 import lol.unsession.db.repo.generateTestData
 import lol.unsession.security.permissions.Access
+import lol.unsession.security.user.User
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -37,6 +39,39 @@ class UnsessionSchema(private val database: Database) {
         val referer = integer("referer").references(id).nullable()
 
         override val primaryKey = PrimaryKey(id)
+
+        fun insert(user: UserDto) {
+            transaction {
+                Users.insert {
+                    it[username] = user.name
+                    it[email] = user.email
+                    it[password] = user.password
+                    it[salt] = user.salt
+                    it[roleName] = user.roleName
+                    it[bannedReason] = user.bannedReason
+                    it[bannedUntil] = user.bannedUntil
+                    it[created] = user.created
+                    it[lastLogin] = user.lastLogin
+                    it[lastIp] = user.lastIp
+                }
+            }
+        }
+        fun fromRow(row: ResultRow, permissions: List<String>): UserDto {
+            return UserDto(
+                row[id],
+                row[username],
+                row[email],
+                row[password],
+                row[salt],
+                permissions,
+                row[roleName],
+                row[bannedReason],
+                row[bannedUntil],
+                row[created],
+                row[lastLogin],
+                row[lastIp],
+            )
+        }
     }
 
     object Permissions : Table() {

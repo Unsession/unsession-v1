@@ -7,6 +7,7 @@ import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
 import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
+import lol.unsession.security.user.User.Companion.toUser
 import lol.unsession.security.utils.Crypto
 import lol.unsession.utils.getLogger
 import org.jetbrains.exposed.sql.*
@@ -51,79 +52,28 @@ object UsersRepositoryImpl : UsersDao {
     }
 
     override suspend fun getUser(id: Int): User? {
-        // select users and join with permissions
-        try {
-            lateinit var user: ResultRow
-            lateinit var permissions: List<String>
-            dbQuery {
-                user = Users
-                    .select { Users.id eq id }
-                    .firstOrNull()!!
-                permissions = Users
-                    .innerJoin(UsersPermissions)
-                    .innerJoin(Permissions)
-                    .select { Users.id eq user[Users.id] }
-                    .map {
-                        it[Permissions.name]
-                    }
-            }
-            return UserDto(
-                user[Users.id],
-                user[Users.username],
-                user[Users.email],
-                user[Users.password],
-                user[Users.salt],
-                permissions,
-                user[Users.roleName],
-                user[Users.bannedReason],
-                user[Users.bannedUntil],
-                user[Users.created],
-                user[Users.lastLogin],
-                user[Users.lastIp],
-            ).toUser()
-        } catch (e: Exception) {
-            return null
+        lateinit var user: ResultRow
+        lateinit var permissions: List<String>
+        dbQuery {
+            user = Users
+                .select { Users.id eq id }
+                .firstOrNull() ?: return@dbQuery null
+            permissions = getPermissions(user[Users.id])
         }
+        return Users.fromRow(user, permissions).toUser()
     }
 
     override suspend fun getUser(email: String, withPermissions: Boolean): User? {
-        try {
-            lateinit var user: ResultRow
+        return dbQuery {
             var permissions: List<String> = listOf()
-            return dbQuery {
-                user = Users
-                    .select { Users.email eq email }
-                    .singleOrNull() ?: return@dbQuery null
-                getLogger("UsersRepo").info("requestedUser: ${user[Users.id]} ${user[Users.username]} ${user[Users.email]} ${user[Users.password]} ${user[Users.salt]} ${user[Users.roleName]} ${user[Users.bannedReason]} ${user[Users.bannedUntil]} ${user[Users.created]} ${user[Users.lastLogin]} ${user[Users.lastIp]}}")
-                if (withPermissions) {
-                    permissions = Users
-                        .innerJoin(UsersPermissions)
-                        .innerJoin(Permissions)
-                        .select { Users.id eq user[Users.id] }
-                        .map {
-                            it[Permissions.name]
-                        }
-
-                }
-                return@dbQuery UserDto(
-                    user[Users.id],
-                    user[Users.username],
-                    user[Users.email],
-                    user[Users.password],
-                    user[Users.salt],
-                    permissions,
-                    user[Users.roleName],
-                    user[Users.bannedReason],
-                    user[Users.bannedUntil],
-                    user[Users.created],
-                    user[Users.lastLogin],
-                    user[Users.lastIp],
-                ).toUser()
+            val user = Users
+                .select { Users.email eq email }
+                .singleOrNull() ?: return@dbQuery null
+            if (withPermissions) {
+                permissions = getPermissions(user[Users.id])
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
-        }
+            Users.fromRow(user, permissions)
+        }?.toUser()
     }
 
     override suspend fun deleteUser(id: Int): Boolean {
@@ -140,17 +90,17 @@ object UsersRepositoryImpl : UsersDao {
             override val message: String
                 get() = "Failed to update user data"
         }
-        try {
+        return try {
             dbQuery {
                 Users.update({ Users.id eq id }) {
                     it[username] = updatedUser.name
                     it[email] = updatedUser.userLoginData?.email ?: throw UpdateException()
                 }
             }
-            return true
+            true
         } catch (e: Exception) {
             e.printStackTrace()
-            return false
+            false
         }
     }
 
@@ -164,7 +114,6 @@ object UsersRepositoryImpl : UsersDao {
     ): Boolean {
         val newUser = registerUser(userLoginData, ip)
         onSuccess(newUser)
-        getLogger("Auth").info("Registered user ${userLoginData.username} (${userLoginData.email})")
         return true
     }
 
@@ -172,21 +121,21 @@ object UsersRepositoryImpl : UsersDao {
     override suspend fun registerUser(userLoginData: User.UserLoginData, ip: String): User {
         val salt = Crypto.generateRandomSalt().toHexString()
         val pwdHash = Crypto.generateHash(userLoginData.password, salt)
-        transaction {
-            Users.insert {
-                it[id] = -1
-                it[username] = userLoginData.username!!
-                it[email] = userLoginData.email
-                it[password] = pwdHash
-                it[this.salt] = salt
-                it[roleName] = Roles.User.roleData.name
-                it[bannedReason] = null
-                it[bannedUntil] = null
-                it[created] = Clock.System.now().epochSeconds.toInt()
-                it[lastLogin] = Clock.System.now().epochSeconds.toInt()
-                it[lastIp] = ip
-            }
-        }
+        val newUserDto = UserDto(
+            id = -1,
+            name = userLoginData.username!!,
+            email = userLoginData.email,
+            password = pwdHash,
+            salt = salt,
+            roleName = Roles.User.roleData.name,
+            permissions = listOf(),
+            bannedReason = null,
+            bannedUntil = null,
+            created = Clock.System.now().epochSeconds.toInt(),
+            lastLogin = Clock.System.now().epochSeconds.toInt(),
+            lastIp = ip,
+        )
+        Users.insert(newUserDto)
         try {
             val newUser = getUser(userLoginData.email, withPermissions = false)
             val roleSet = setRole(newUser!!.id, Roles.User)
@@ -197,7 +146,7 @@ object UsersRepositoryImpl : UsersDao {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        throw Exception("Failed to register user ${userLoginData.username} (${userLoginData.email})")
+        throw Exception("Failed to register user")
     }
 
     override suspend fun setRole(id: Int, role: Roles): Boolean {
@@ -260,6 +209,18 @@ object UsersRepositoryImpl : UsersDao {
                     it[Users.salt],
                 )
             }
+        }
+    }
+
+    private suspend fun getPermissions(userId: Int): List<String> {
+        return dbQuery {
+            Users
+                .innerJoin(UsersPermissions)
+                .innerJoin(Permissions)
+                .select { Users.id eq userId }
+                .map {
+                    it[Permissions.name]
+                }
         }
     }
 }
