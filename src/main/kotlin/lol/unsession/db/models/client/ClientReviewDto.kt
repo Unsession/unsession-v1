@@ -1,6 +1,8 @@
 package lol.unsession.db.models.client
 
 import kotlinx.serialization.Serializable
+import lol.unsession.db.UnsessionSchema
+import lol.unsession.db.UnsessionSchema.TeacherReview.comment
 import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.security.user.User
@@ -42,5 +44,22 @@ data class Review (
                 review.comment
             )
         }
+    }
+    fun toReviewDto(): ReviewDto {
+        return ReviewDto(
+            id = null,
+            userId = user.id,
+            teacherId = teacher.id,
+            globalRating = globalRating,
+            labsRating = labsRating,
+            hwRating = hwRating,
+            examRating = examRating,
+            kindness = kindness,
+            responsibility = responsibility,
+            individuality = individuality,
+            humour = humour,
+            createdTimestamp = createdTimestamp,
+            comment = comment
+        )
     }
 }

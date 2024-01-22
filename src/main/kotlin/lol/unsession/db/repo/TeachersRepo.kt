@@ -1,179 +1,154 @@
 package lol.unsession.db.repo
 
-import lol.unsession.Utils
-import lol.unsession.db.UnsessionSchema.Companion.dbQuery
-import lol.unsession.db.UnsessionSchema.Teacher
-import lol.unsession.db.UnsessionSchema.TeacherReview
-import lol.unsession.db.models.ReviewDto.Companion.toReviewDto
+import lol.unsession.db.UnsessionSchema.*
+import lol.unsession.db.UnsessionSchema.Teacher.create
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.client.Review
-import lol.unsession.security.user.User
-import lol.unsession.test.TestSDK
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import lol.unsession.findColumn
+import lol.unsession.plugins.DataSelectParameters
+import lol.unsession.plugins.PagingFilterParameters
+import lol.unsession.plugins.Sorter
+import lol.unsession.plugins.configureDatabasesLocalhost
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.wrap
+import org.jetbrains.exposed.sql.transactions.transaction
 
 interface TeachersRepo {
-    suspend fun getTeacher(id: Int): TeacherDto?
-    suspend fun getTeachers(page: Int, pageSize: Int): List<TeacherDto>
+    suspend fun getTeacher(id: Int): TeacherDto? // single object
+    suspend fun getTeachers(paging: PagingFilterParameters): List<TeacherDto>
     suspend fun addTeacher(teacher: TeacherDto): TeacherDto?
-    suspend fun searchTeachers(prompt: String, page: Int, pageSize: Int): List<TeacherDto>
+    suspend fun searchTeachers(prompt: String, paging: PagingFilterParameters): List<TeacherDto>
 }
 
-interface ReviewsRepository {
-    suspend fun getReview(id: Int): Review?
-    suspend fun getReviews(page: Int, pageSize: Int): List<Review>
-    suspend fun getReviewsByTeacher(teacherId: Int, page: Int, pageSize: Int): List<Review>
-    suspend fun getReviewsByUser(userId: Int, page: Int, pageSize: Int): List<Review>
-    suspend fun addReview(rating: Review): Boolean
+interface ReviewsRepo {
+    suspend fun getReview(id: Int): Review? // single object
+    suspend fun getReviews(paging: PagingFilterParameters): List<Review>
+    suspend fun getReviewsByTeacher(teacherId: Int, paging: PagingFilterParameters): List<Review>
+    suspend fun getReviewsByUser(userId: Int, paging: PagingFilterParameters): List<Review>
+    suspend fun addReview(review: Review): Review?
 }
 
-object TeachersReviewsRepositoryImpl : TeachersRepo, ReviewsRepository {
-    override suspend fun getTeacher(id: Int): TeacherDto? {
-        return dbQuery {
-            Teacher.select { Teacher.id eq id }.firstOrNull()?.let {
-                TeacherDto(
-                    it[Teacher.id],
-                    it[Teacher.name],
-                    it[Teacher.email],
-                    it[Teacher.department],
-                )
-            }
+sealed class Repository {
+
+    object Teachers : TeachersRepo {
+        override suspend fun getTeacher(id: Int): TeacherDto? {
+            return Teacher.select { Teacher.id eq id }.map { Teacher.fromRow(it) }.firstOrNull()
+        }
+
+        override suspend fun getTeachers(paging: PagingFilterParameters): List<TeacherDto> {
+            TODO("Not yet")//return selectData(Teacher, paging).map { Teacher.fromRow(it) }
+        }
+
+        override suspend fun addTeacher(teacher: TeacherDto): TeacherDto? {
+            return create(teacher)
+        }
+
+        override suspend fun searchTeachers(prompt: String, paging: PagingFilterParameters): List<TeacherDto> {
+            TODO("Not yet implemented")
         }
     }
 
-    override suspend fun getTeachers(page: Int, pageSize: Int): List<TeacherDto> {
-        return dbQuery {
-            Teacher.selectAll().limit(pageSize, (page * pageSize).toLong()).map {
-                TeacherDto(
-                    it[Teacher.id],
-                    it[Teacher.name],
-                    it[Teacher.email],
-                    it[Teacher.department],
-                )
-            }
+    object Reviews : ReviewsRepo {
+        override suspend fun getReview(id: Int): Review? {
+            val review = TeacherReview.select { TeacherReview.id eq id }.map { TeacherReview.fromRow(it) }.firstOrNull()
+                ?: return null
+            val user = UsersRepositoryImpl.getUser(review.userId)
+                ?: return null
+            val teacher = Teacher.select { Teacher.id eq review.teacherId }.map { Teacher.fromRow(it) }.firstOrNull()
+                ?: return null
+            return Review.fromReviewAndUser(review, user, teacher)
+        }
+
+        override suspend fun getReviews(paging: PagingFilterParameters): List<Review> {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun getReviewsByTeacher(teacherId: Int, paging: PagingFilterParameters): List<Review> {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun getReviewsByUser(userId: Int, paging: PagingFilterParameters): List<Review> {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun addReview(review: Review): Review? {
+            return TeacherReview.create(review.toReviewDto())?.toReview()
         }
     }
 
-    override suspend fun addTeacher(teacher: TeacherDto): TeacherDto? {
-        if (dbQuery {
-                Teacher.insert {
-                    it[id] = teacher.id
-                    it[name] = teacher.name
-                    it[email] = teacher.email
-                    it[department] = teacher.department
-                }
-            }.insertedCount != 1) {
-            return null
-        }
-        return teacher
-    }
-
-    override suspend fun searchTeachers(prompt: String, page: Int, pageSize: Int): List<TeacherDto> {
-        return dbQuery {
-            Teacher.select { Teacher.name like "%$prompt%" }.limit(pageSize, (page * pageSize).toLong()).map {
-                TeacherDto(
-                    it[Teacher.id],
-                    it[Teacher.name],
-                    it[Teacher.email],
-                    it[Teacher.department],
-                )
-            }
-        }
-    }
-
-    override suspend fun getReview(id: Int): Review? {
-        return dbQuery { TeacherReview.select { TeacherReview.id eq id }.firstOrNull()?.toReviewDto()?.toReview() }
-    }
-
-    override suspend fun getReviews(page: Int, pageSize: Int): List<Review> {
-        return dbQuery {
-            TeacherReview.selectAll().limit(pageSize, (page * pageSize).toLong()).map {
-                it.toReviewDto().toReview()
-            }
-        }
-    }
-
-    override suspend fun getReviewsByTeacher(teacherId: Int, page: Int, pageSize: Int): List<Review> {
-        return dbQuery {
-            TeacherReview.select { TeacherReview.teacher eq teacherId }
-                .limit(pageSize, (page * pageSize).toLong()).map {
-                    it.toReviewDto().toReview()
-                }
-        }
-    }
-
-    override suspend fun getReviewsByUser(userId: Int, page: Int, pageSize: Int): List<Review> {
-        return dbQuery {
-            TeacherReview.select { TeacherReview.user eq userId }
-                .limit(pageSize, (page * pageSize).toLong()).map {
-                    it.toReviewDto().toReview()
-                }
-        }
-    }
-
-    override suspend fun addReview(rating: Review): Boolean {
-        return dbQuery {
-            TeacherReview.insert {
-                it[user] = rating.user.id
-                it[teacher] = rating.teacher.id
-                it[global_rating] = rating.globalRating
-                it[labs_rating] = rating.labsRating
-                it[hw_rating] = rating.hwRating
-                it[exam_rating] = rating.examRating
-                it[kindness_rating] = rating.kindness
-                it[responsibility_rating] = rating.responsibility
-                it[individuality_rating] = rating.individuality
-                it[humor_rating] = rating.humour
-                it[comment] = rating.comment
-                it[created] = rating.createdTimestamp
-            }.insertedCount > 0
-        }
-    }
 }
 
-suspend fun generateTestData(onExecuted: suspend (String) -> Unit) {
-    val usersRepo = UsersRepositoryImpl
-    val teachersRepo = TeachersReviewsRepositoryImpl
-    val teachersId = mutableListOf<Int>()
-    repeat(20) {
-        teachersId.add(
-            teachersRepo.addTeacher(
-                TeacherDto(TestSDK.globalPersonId, TestSDK.name, TestSDK.email, TestSDK.department)
-            )!!.id
-        )
-    }
-    repeat(5) {
-        usersRepo.tryRegisterUser(
-            User.UserLoginData(
-                TestSDK.username,
-                TestSDK.email,
-                TestSDK.password,
-            ), "1.1.1.1",
-            onSuccess = { user ->
-                repeat(5) {
-                    teachersRepo.addReview(
-                        Review(
-                            null,
-                            user,
-                            TeachersReviewsRepositoryImpl.getTeacher(teachersId.random())!!,
-                            (1..5).random(),
-                            (1..5).random(),
-                            (1..5).random(),
-                            (1..5).random(),
-                            (1..5).random(),
-                            (1..5).random(),
-                            (1..5).random(),
-                            (1..5).random(),
-                            Utils.now,
-                            TestSDK.lorem(
-                                (6..20).random()
-                            )
-                        )
+fun main() {
+    configureDatabasesLocalhost()
+    println(
+        selectData(
+            Teacher, PagingFilterParameters(
+                page = 0,
+                pageSize = 2,
+                dataSelectParameters = DataSelectParameters(
+                    filters = hashMapOf(
+                        "full_name" to "Елизавета",
+                        "department" to "КТиУ",
+                    ),
+                    sort = Sorter(
+                        field = "department",
+                        a = true,
                     )
-                }
-                onExecuted("Test data generated successfully")
-            }
+
+                )
+            )
         )
+    )
+}
+
+fun selectData(table: Table, pagingParameters: PagingFilterParameters): List<ResultRow> {
+    return transaction {
+        // if params.filtering null => select all
+        // else select with filtering
+        // if params.sorting null => do not sort
+        // else sorting
+        // then limit by paging parameters
+        val params = pagingParameters.dataSelectParameters
+        fun filter(q: Query, c: String, v: Any) {
+            table.findColumn(c)?.let { column ->
+                q.adjustWhere {
+                    column.eq(column.wrap(v))
+                }
+            }
+        }
+        fun andFilter(q: Query, c: String, v: Any) {
+            table.findColumn(c)?.let { column ->
+                q.andWhere {
+                    column.eq(column.wrap(v))
+                }
+            }
+        }
+        val query = table.selectAll()
+        params?.filters?.let {
+            params.filters.entries.toList()[0].let { (k, v) ->
+                filter(query, k, v)
+            }
+            if (params.filters.size > 1) {
+                for (i in 1 until params.filters.size) {
+                    params.filters.entries.toList()[i].let { (k, v) ->
+                        andFilter(query, k, v)
+                    }
+                }
+            }
+        }
+        query.limit(pagingParameters.pageSize, (pagingParameters.page * pagingParameters.pageSize).toLong())
+        params?.sort?.let { sorter ->
+            if (sorter.a) {
+                query.sortedBy {
+                    table.findColumn(sorter.field)
+                }
+            } else {
+                query.sortedByDescending {
+                    table.findColumn(sorter.field)
+                }
+            }
+        }
+        return@transaction query.toList()
     }
 }

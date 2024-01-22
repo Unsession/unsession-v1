@@ -3,8 +3,9 @@ package lol.unsession.db
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import lol.unsession.db.models.ReviewDto
+import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
-import lol.unsession.db.repo.generateTestData
 import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
 import org.jetbrains.exposed.sql.*
@@ -24,7 +25,7 @@ class UnsessionSchema(private val database: Database) {
         }
 
         val password = varchar("hash", 128)
-        val salt = varchar("salt", 16*8)
+        val salt = varchar("salt", 16 * 8)
 
         val roleName = varchar("roleName", 32)
 
@@ -40,8 +41,8 @@ class UnsessionSchema(private val database: Database) {
 
         override val primaryKey = PrimaryKey(id)
 
-        fun insert(user: UserDto) {
-            transaction {
+        fun create(user: UserDto): UserDto? {
+            if (transaction {
                 Users.insert {
                     it[username] = user.name
                     it[email] = user.email
@@ -54,8 +55,11 @@ class UnsessionSchema(private val database: Database) {
                     it[lastLogin] = user.lastLogin
                     it[lastIp] = user.lastIp
                 }
-            }
+            }.insertedCount == 1)
+                return user
+            return null
         }
+
         fun fromRow(row: ResultRow, permissions: List<String>): UserDto {
             return UserDto(
                 row[id],
@@ -83,7 +87,7 @@ class UnsessionSchema(private val database: Database) {
 
         fun insertPermissions() {
             if (Permissions.selectAll().count().toInt() > 0) return
-            Access.entries.forEach{ access ->
+            Access.entries.forEach { access ->
                 transaction {
                     Permissions.insert {
                         it[name] = access.name
@@ -98,6 +102,18 @@ class UnsessionSchema(private val database: Database) {
         val id = integer("id").autoIncrement().uniqueIndex()
         val userId = integer("user_id").references(Users.id)
         val permissionId = integer("permission_id").references(Permissions.id)
+        fun getPermissions(userId: Int): List<String> {
+            return transaction {
+                Users
+                    .innerJoin(UsersPermissions)
+                    .innerJoin(Permissions)
+                    .select { Users.id eq userId }
+                    .map {
+                        it[Permissions.name]
+                    }
+            }
+
+        }
 
         override val primaryKey = PrimaryKey(id)
     }
@@ -115,12 +131,37 @@ class UnsessionSchema(private val database: Database) {
     }
 
     object Teacher : Table() {
-        val id = integer("id").autoIncrement().check("check_global_person_id") { it lessEq 999999 and (it greaterEq 100000) }
-            .uniqueIndex("global_person_id")
+        val id =
+            integer("id").autoIncrement().check("check_global_person_id") { it lessEq 999999 and (it greaterEq 100000) }
+                .uniqueIndex("global_person_id")
         val name = varchar("full_name", 256)
         val email = varchar("email", 64).check { it like "%@niuitmo.ru" or (it like "%@itmo.ru") }
             .nullable()
         val department = varchar("department", 128)
+
+        fun fromRow(row: ResultRow): TeacherDto {
+            return TeacherDto(
+                row[id],
+                row[name],
+                row[email],
+                row[department],
+            )
+        }
+
+        fun create(teacher: TeacherDto): TeacherDto? {
+            if (
+            transaction {
+                Teacher.insert {
+                    it[id] = teacher.id
+                    it[name] = teacher.name
+                    it[email] = teacher.email
+                    it[department] = teacher.department
+                }
+            }.insertedCount == 1) {
+                return teacher
+            }
+            return null
+        }
 
         override val primaryKey = PrimaryKey(id)
     }
@@ -155,6 +196,48 @@ class UnsessionSchema(private val database: Database) {
 
         val comment = varchar("comment", 1024).nullable()
         val created = integer("created").default(Clock.System.now().epochSeconds.toInt())
+
+        fun fromRow(row: ResultRow): ReviewDto {
+            return ReviewDto(
+                row[id],
+                row[user],
+                row[teacher],
+                row[global_rating],
+                row[labs_rating],
+                row[hw_rating],
+                row[exam_rating],
+                row[kindness_rating],
+                row[responsibility_rating],
+                row[individuality_rating],
+                row[humor_rating],
+                row[created],
+                row[comment],
+            )
+        }
+
+        fun create(review: ReviewDto): ReviewDto? {
+            if (
+                transaction {
+                    TeacherReview.insert {
+                        it[user] = review.userId
+                        it[teacher] = review.teacherId
+                        it[global_rating] = review.globalRating
+                        it[labs_rating] = review.labsRating
+                        it[hw_rating] = review.hwRating
+                        it[exam_rating] = review.examRating
+                        it[kindness_rating] = review.kindness
+                        it[responsibility_rating] = review.responsibility
+                        it[individuality_rating] = review.individuality
+                        it[humor_rating] = review.humour
+                        it[created] = review.createdTimestamp
+                        it[comment] = review.comment
+                    }
+                }.insertedCount == 1
+            ) {
+                return review
+            }
+            return null
+        }
 
         override val primaryKey = PrimaryKey(id)
     }
@@ -193,10 +276,12 @@ class UnsessionSchema(private val database: Database) {
         transaction(database) {
             //val schema = Schema("unsession", "postgres", System.getenv("pgpass"))
             // drop all tables cascade
-            exec("""
+            exec(
+                """
                 DROP SCHEMA public CASCADE;
                 CREATE SCHEMA public;
-            """.trimIndent())
+            """.trimIndent()
+            )
             //SchemaUtils.createSchema(schema)
             SchemaUtils.create(Users, Codes, Teacher, TeacherReview, Permissions)
             Permissions.insertPermissions()

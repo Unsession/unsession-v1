@@ -3,6 +3,7 @@ package lol.unsession.db.repo
 import kotlinx.datetime.Clock
 import lol.unsession.db.UnsessionSchema.*
 import lol.unsession.db.UnsessionSchema.Companion.dbQuery
+import lol.unsession.db.UnsessionSchema.UsersPermissions.getPermissions
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
 import lol.unsession.security.permissions.Roles
@@ -58,7 +59,15 @@ object UsersRepositoryImpl : UsersDao {
             user = Users
                 .select { Users.id eq id }
                 .firstOrNull() ?: return@dbQuery null
-            permissions = getPermissions(user[Users.id])
+            permissions = transaction {
+                Users
+                    .innerJoin(UsersPermissions)
+                    .innerJoin(Permissions)
+                    .select { Users.id eq user[Users.id] }
+                    .map {
+                        it[Permissions.name]
+                    }
+            }
         }
         return Users.fromRow(user, permissions).toUser()
     }
@@ -135,7 +144,7 @@ object UsersRepositoryImpl : UsersDao {
             lastLogin = Clock.System.now().epochSeconds.toInt(),
             lastIp = ip,
         )
-        Users.insert(newUserDto)
+        Users.create(newUserDto)
         try {
             val newUser = getUser(userLoginData.email, withPermissions = false)
             val roleSet = setRole(newUser!!.id, Roles.User)
@@ -209,18 +218,6 @@ object UsersRepositoryImpl : UsersDao {
                     it[Users.salt],
                 )
             }
-        }
-    }
-
-    private suspend fun getPermissions(userId: Int): List<String> {
-        return dbQuery {
-            Users
-                .innerJoin(UsersPermissions)
-                .innerJoin(Permissions)
-                .select { Users.id eq userId }
-                .map {
-                    it[Permissions.name]
-                }
         }
     }
 }

@@ -7,12 +7,22 @@ import io.ktor.server.response.*
 import lol.unsession.db.UnsessionSchema
 import org.jetbrains.exposed.sql.*
 
-fun Application.configureDatabases() {
+fun configureDatabases() {
     val database = Database.connect(
         url = "jdbc:postgresql://localhost:5432/unsession",
         user = "vlad",
         driver = "org.postgresql.Driver",
         password = "08790Slv!!"
+    )
+    val schema = UnsessionSchema(database)
+}
+
+fun configureDatabasesLocalhost() {
+    val database = Database.connect(
+        url = "jdbc:postgresql://localhost:5432/unsession",
+        user = "postgres",
+        driver = "org.postgresql.Driver",
+        password = "08790SLV"
     )
     val schema = UnsessionSchema(database)
 }
