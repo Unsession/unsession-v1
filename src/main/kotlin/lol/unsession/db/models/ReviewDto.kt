@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 import lol.unsession.db.UnsessionSchema.TeacherReview
 import lol.unsession.db.models.client.Review
 import lol.unsession.db.repo.Repository
-import lol.unsession.db.repo.UsersRepositoryImpl
 import org.jetbrains.exposed.sql.ResultRow
 
 @Serializable
@@ -30,8 +29,8 @@ data class ReviewDto (
         fun ResultRow.toReviewDto(): ReviewDto {
             return ReviewDto(
                 this[TeacherReview.id],
-                this[TeacherReview.user],
-                this[TeacherReview.teacher],
+                this[TeacherReview.userId],
+                this[TeacherReview.teacherId],
                 this[TeacherReview.global_rating],
                 this[TeacherReview.labs_rating],
                 this[TeacherReview.hw_rating],
@@ -47,7 +46,7 @@ data class ReviewDto (
     }
 
     suspend fun toReview(): Review {
-        val users = UsersRepositoryImpl
+        val users = Repository.Users
         val user = users.getUser(userId)
         val teacher = Repository.Teachers.getTeacher(teacherId)
         return Review.fromReviewAndUser(this, user!!, teacher!!)

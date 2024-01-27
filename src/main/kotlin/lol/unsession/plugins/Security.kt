@@ -14,7 +14,8 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import lol.unsession.db.repo.UsersRepositoryImpl
+import lol.unsession.db.repo.Repository
+import lol.unsession.isDebug
 import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
@@ -24,20 +25,22 @@ import kotlin.collections.HashSet
 import kotlin.time.Duration
 
 fun Application.configureSecurity() {
-    val usersRepo = UsersRepositoryImpl
-    val secret = "Ejrr]&HrrCr^DLy:xOfx}o5}%3_;x=U\$/J<H<l,4NTIRImVYBTXqB\\BQ(xlJdznP_GnZ3N_7*_FJXERo[nK4<5WByGtJtD}&_PJh}frdL%{N:usAbg5B<9*]]g;s,Ug;payment.key=TC-INVOICE_ee257eb3dc175e6ee5f7a58f89a09954651d7ae67381847f4d0c6c47cb47db1188"//System.getenv("secret")
-    val issuer = ""//System.getenv("jwt.issuer")
+    val secret = System.getenv("jwt_secret")
 
     install(Authentication) {
         jwt("user-auth") {
             val logger = getLogger("validator")
             verifier(JWT
                 .require(Algorithm.HMAC512(secret))
-                .withIssuer(issuer)
+                .withIssuer("unsession")
                 .build())
             validate { credential ->
+                if (isDebug()) {
+                    logger.debug("debug mode")
+                    return@validate JWTPrincipal(credential.payload)
+                }
                 try {
-                    val user = usersRepo.getUser(credential.payload.getClaim("userId").asInt())
+                    val user = Repository.Users.getUser(credential.payload.getClaim("userId").asInt())
                     logger.debug("requested from token: ${user.toString()}")
                     if (credential.payload.getClaim("username").asString() != "" &&
                         user != null &&
@@ -65,7 +68,7 @@ fun Application.configureSecurity() {
         post("/login") {
             val loginData = call.receive<User.UserLoginData>()
 
-            val user = usersRepo.getUser(loginData.email)
+            val user = Repository.Users.getUser(loginData.email)
             if (user == null) call.respond(HttpStatusCode.Unauthorized)
             if (user!!.isBanned) call.respond(HttpStatusCode.Unauthorized)
 
@@ -92,7 +95,7 @@ fun createToken(user: User): String {
         .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withClaim("username", user.name)
         .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + 10_000))
-        .sign(Algorithm.HMAC512("Ejrr]&HrrCr^DLy:xOfx}o5}%3_;x=U\$/J<H<l,4NTIRImVYBTXqB\\BQ(xlJdznP_GnZ3N_7*_FJXERo[nK4<5WByGtJtD}&_PJh}frdL%{N:usAbg5B<9*]]g;s,Ug;payment.key=TC-INVOICE_ee257eb3dc175e6ee5f7a58f89a09954651d7ae67381847f4d0c6c47cb47db1188"/*System.getenv("secret")*/))
+        .sign(Algorithm.HMAC512(System.getenv("jwt_secret")))
 }
 
 fun getPermissionsFromToken(token: String): HashSet<Access> {

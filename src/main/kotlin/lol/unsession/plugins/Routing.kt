@@ -13,12 +13,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.logging.*
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.client.Review
 import lol.unsession.db.repo.Repository
-import lol.unsession.db.repo.UsersRepositoryImpl
+import lol.unsession.db.wrapper.PagingFilterParameters
 import lol.unsession.security.permissions.Access.*
 import lol.unsession.security.user.User
 import lol.unsession.utils.getLogger
@@ -32,7 +31,6 @@ data class LoginResponse(
 )
 
 fun Application.configureRouting() {
-    val usersRepo = UsersRepositoryImpl
     install(StatusPages) {
         exception<Throwable> { call, cause ->
             call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
@@ -64,7 +62,7 @@ fun Application.configureRouting() {
                 if (!loginData.validate()) {
                     call.respond(HttpStatusCode.BadRequest, "Invalid login data")
                 }
-                usersRepo.tryRegisterUser(loginData, call.request.origin.remoteAddress, onSuccess = {
+                Repository.Users.tryRegisterUser(loginData, call.request.origin.remoteAddress, onSuccess = {
                     val token = createToken(it)
                     logger.info("Registered user ${loginData.username}; ${call.request.origin.remoteHost}; ${call.request.headers}")
                     call.respond(LoginResponse(token, it))
@@ -181,39 +179,6 @@ fun Application.configureRouting() {
                     }
                 }
             }
-        }
-    }
-}
-
-@Serializable
-data class Sorter(
-    val field: String,
-    val a: Boolean,
-)
-
-@Serializable
-data class DataSelectParameters(
-    val filters: HashMap<String, @Contextual Any>? = null,
-    val sort: Sorter?,
-)
-
-@Serializable
-data class PagingFilterParameters(
-    val page: Int,
-    val pageSize: Int,
-    val dataSelectParameters: DataSelectParameters?,
-) {
-    companion object {
-        suspend fun from(call: ApplicationCall): PagingFilterParameters {
-            val params = call.request.queryParameters
-            val page = params["page"]?.toIntOrNull() ?: -1
-            val pageSize = params["pageSize"]?.toIntOrNull() ?: -1
-            val addParams = call.receiveNullable<DataSelectParameters>()
-            if (page == -1 || pageSize == -1) {
-                call.respond(HttpStatusCode.BadRequest, "No page or PageSize specified")
-                return PagingFilterParameters(-1, -1, null) // never happens, but compiler doesn't know
-            }
-            return PagingFilterParameters(page, pageSize, addParams)
         }
     }
 }

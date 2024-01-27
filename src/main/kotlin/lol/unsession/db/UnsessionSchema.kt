@@ -1,14 +1,17 @@
 package lol.unsession.db
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import lol.unsession.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
+import lol.unsession.db.wrapper.PagingFilterParameters
+import lol.unsession.findColumn
 import lol.unsession.security.permissions.Access
-import lol.unsession.security.user.User
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.wrap
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.random.Random
@@ -43,19 +46,19 @@ class UnsessionSchema(private val database: Database) {
 
         fun create(user: UserDto): UserDto? {
             if (transaction {
-                Users.insert {
-                    it[username] = user.name
-                    it[email] = user.email
-                    it[password] = user.password
-                    it[salt] = user.salt
-                    it[roleName] = user.roleName
-                    it[bannedReason] = user.bannedReason
-                    it[bannedUntil] = user.bannedUntil
-                    it[created] = user.created
-                    it[lastLogin] = user.lastLogin
-                    it[lastIp] = user.lastIp
-                }
-            }.insertedCount == 1)
+                    Users.insert {
+                        it[username] = user.name
+                        it[email] = user.email
+                        it[password] = user.password
+                        it[salt] = user.salt
+                        it[roleName] = user.roleName
+                        it[bannedReason] = user.bannedReason
+                        it[bannedUntil] = user.bannedUntil
+                        it[created] = user.created
+                        it[lastLogin] = user.lastLogin
+                        it[lastIp] = user.lastIp
+                    }
+                }.insertedCount == 1)
                 return user
             return null
         }
@@ -150,14 +153,14 @@ class UnsessionSchema(private val database: Database) {
 
         fun create(teacher: TeacherDto): TeacherDto? {
             if (
-            transaction {
-                Teacher.insert {
-                    it[id] = teacher.id
-                    it[name] = teacher.name
-                    it[email] = teacher.email
-                    it[department] = teacher.department
-                }
-            }.insertedCount == 1) {
+                transaction {
+                    Teacher.insert {
+                        it[id] = teacher.id
+                        it[name] = teacher.name
+                        it[email] = teacher.email
+                        it[department] = teacher.department
+                    }
+                }.insertedCount == 1) {
                 return teacher
             }
             return null
@@ -168,8 +171,8 @@ class UnsessionSchema(private val database: Database) {
 
     object TeacherReview : Table() {
         val id = integer("id").autoIncrement().uniqueIndex()
-        val user = integer("user").references(Users.id)
-        val teacher = integer("teacher").references(Teacher.id)
+        val userId = integer("user").references(Users.id)
+        val teacherId = integer("teacher").references(Teacher.id)
 
         val global_rating = integer("global_review").check("check_global_review") { it greaterEq 0 and (it lessEq 5) }
         val labs_rating =
@@ -200,8 +203,8 @@ class UnsessionSchema(private val database: Database) {
         fun fromRow(row: ResultRow): ReviewDto {
             return ReviewDto(
                 row[id],
-                row[user],
-                row[teacher],
+                row[userId],
+                row[teacherId],
                 row[global_rating],
                 row[labs_rating],
                 row[hw_rating],
@@ -219,8 +222,8 @@ class UnsessionSchema(private val database: Database) {
             if (
                 transaction {
                     TeacherReview.insert {
-                        it[user] = review.userId
-                        it[teacher] = review.teacherId
+                        it[userId] = review.userId
+                        it[teacherId] = review.teacherId
                         it[global_rating] = review.globalRating
                         it[labs_rating] = review.labsRating
                         it[hw_rating] = review.hwRating
@@ -310,5 +313,106 @@ class UnsessionSchema(private val database: Database) {
     companion object {
         suspend fun <T> dbQuery(block: suspend (transaction: Transaction) -> T): T =
             newSuspendedTransaction(Dispatchers.IO) { block(this) }
+    }
+}
+
+suspend fun selectData(
+    columns: ColumnSet,
+    pagingParameters: PagingFilterParameters
+): List<ResultRow> {
+    return dbQuery {
+        val params = pagingParameters.dataSelectParameters
+        fun filter(q: Query, c: String, v: Any) {
+            columns.findColumn(c)?.let { column ->
+                q.adjustWhere {
+                    column.eq(column.wrap(v))
+                }
+            }
+        }
+
+        fun andFilter(q: Query, c: String, v: Any) {
+            columns.findColumn(c)?.let { column ->
+                q.andWhere {
+                    column.eq(column.wrap(v))
+                }
+            }
+        }
+
+        val query = columns.selectAll()
+        params?.filters?.let {
+            params.filters.entries.toList()[0].let { (k, v) ->
+                filter(query, k, v)
+            }
+            if (params.filters.size > 1) {
+                for (i in 1 until params.filters.size) {
+                    params.filters.entries.toList()[i].let { (k, v) ->
+                        andFilter(query, k, v)
+                    }
+                }
+            }
+        }
+        query.limit(pagingParameters.pageSize, (pagingParameters.page * pagingParameters.pageSize).toLong())
+        params?.sort?.let { sorter ->
+            if (sorter.a) {
+                query.sortedBy {
+                    columns.findColumn(sorter.field)
+                }
+            } else {
+                query.sortedByDescending {
+                    columns.findColumn(sorter.field)
+                }
+            }
+        }
+        return@dbQuery query.toList()
+    }
+}
+
+suspend fun selectData(
+    columns: ColumnSet,
+    query: Query,
+    pagingParameters: PagingFilterParameters
+): List<ResultRow> {
+    return dbQuery {
+        val params = pagingParameters.dataSelectParameters
+        fun filter(q: Query, c: String, v: Any) {
+            columns.findColumn(c)?.let { column ->
+                q.adjustWhere {
+                    column.eq(column.wrap(v))
+                }
+            }
+        }
+
+        fun andFilter(q: Query, c: String, v: Any) {
+            columns.findColumn(c)?.let { column ->
+                q.andWhere {
+                    column.eq(column.wrap(v))
+                }
+            }
+        }
+        params?.filters?.let {
+            params.filters.entries.toList()[0].let { (k, v) ->
+                filter(query, k, v)
+            }
+            if (params.filters.size > 1) {
+                for (i in 1 until params.filters.size) {
+                    params.filters.entries.toList()[i].let { (k, v) ->
+                        andFilter(query, k, v)
+                    }
+                }
+            }
+        }
+        query.limit(pagingParameters.pageSize, (pagingParameters.page * pagingParameters.pageSize).toLong())
+        params?.sort?.let { sorter ->
+            if (sorter.a) {
+                query.sortedBy {
+                    columns.findColumn(sorter.field)
+                }
+            } else {
+                query.sortedByDescending {
+                    columns.findColumn(sorter.field)
+                }
+            }
+        }
+        return@dbQuery query.toList()
     }
 }
