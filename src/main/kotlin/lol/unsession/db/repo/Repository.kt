@@ -6,12 +6,12 @@ import lol.unsession.containsAnyKeyNotIn
 import lol.unsession.db.UnsessionSchema
 import lol.unsession.db.UnsessionSchema.*
 import lol.unsession.db.UnsessionSchema.Teacher.create
+import lol.unsession.db.models.PagingFilterParameters
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
 import lol.unsession.db.models.client.Review
 import lol.unsession.db.selectData
-import lol.unsession.db.wrapper.PagingFilterParameters
 import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
@@ -128,7 +128,7 @@ sealed class Repository {
             }
         }
 
-        override suspend fun getUser(id: Int): User? {
+        override suspend fun getUser(id: Int): User {
             lateinit var user: ResultRow
             lateinit var permissions: List<String>
             Companion.dbQuery {

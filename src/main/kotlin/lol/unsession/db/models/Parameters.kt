@@ -1,4 +1,4 @@
-package lol.unsession.db.wrapper
+package lol.unsession.db.models
 
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -38,10 +38,5 @@ data class PagingFilterParameters(
             }
             return PagingFilterParameters(page, pageSize, addParams)
         }
-    }
-
-    fun addFilter(key: String, value: Any): PagingFilterParameters {
-        dataSelectParameters?.filters?.put(key, value)
-        return this
     }
 }

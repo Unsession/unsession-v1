@@ -10,22 +10,16 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DatePeriod
-import kotlinx.datetime.DateTimePeriod
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import lol.unsession.db.repo.Repository
-import lol.unsession.isDebug
+import lol.unsession.getConfig
 import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
 import lol.unsession.utils.getLogger
 import java.util.*
-import kotlin.collections.HashSet
-import kotlin.time.Duration
 
 fun Application.configureSecurity() {
-    val secret = System.getenv("jwt_secret")
+    val secret = getConfig().secret
 
     install(Authentication) {
         jwt("user-auth") {
@@ -35,13 +29,9 @@ fun Application.configureSecurity() {
                 .withIssuer("unsession")
                 .build())
             validate { credential ->
-                if (isDebug()) {
-                    logger.debug("debug mode")
-                    return@validate JWTPrincipal(credential.payload)
-                }
                 try {
                     val user = Repository.Users.getUser(credential.payload.getClaim("userId").asInt())
-                    logger.debug("requested from token: ${user.toString()}")
+                    logger.debug("requested from token: $user")
                     if (credential.payload.getClaim("username").asString() != "" &&
                         user != null &&
                         credential.expiresAt!!.time > Clock.System.now().toEpochMilliseconds()
@@ -90,12 +80,12 @@ fun Application.configureSecurity() {
 
 fun createToken(user: User): String {
     return JWT.create()
-        .withIssuer(System.getenv("jwt_issuer"))
+        .withIssuer("Unsession")
         .withClaim("userId", user.id)
         .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withClaim("username", user.name)
         .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + 10_000))
-        .sign(Algorithm.HMAC512(System.getenv("jwt_secret")))
+        .sign(Algorithm.HMAC512(getConfig().secret))
 }
 
 fun getPermissionsFromToken(token: String): HashSet<Access> {

@@ -1,6 +1,6 @@
 package lol.unsession.plugins
 
-import freemarker.cache.*
+import freemarker.cache.ClassTemplateLoader
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -14,10 +14,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.logging.*
 import kotlinx.serialization.Serializable
+import lol.unsession.db.models.PagingFilterParameters
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.client.Review
 import lol.unsession.db.repo.Repository
-import lol.unsession.db.wrapper.PagingFilterParameters
 import lol.unsession.security.permissions.Access.*
 import lol.unsession.security.user.User
 import lol.unsession.utils.getLogger
@@ -44,10 +44,6 @@ fun Application.configureRouting() {
         templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
     }
     routing {
-        get("/") {
-            val fileContent = Application::class.java.getResource("/static/zhdun")!!.readText(Charsets.UTF_8)
-            call.respondText(fileContent)
-        }
         get("/ping") {
             call.respondText("pong")
         }
@@ -81,6 +77,10 @@ fun Application.configureRouting() {
         }
         route("/api") {
             route("/v1") {
+                get("/") {
+                    val fileContent = Application::class.java.getResource("/static/zhdun")!!.readText(Charsets.UTF_8)
+                    call.respondText(fileContent)
+                }
                 authenticate("user-auth") {
                     route("/teachers") {
                         post("/create") {

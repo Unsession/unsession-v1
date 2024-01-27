@@ -1,8 +1,5 @@
 package lol.unsession.test
 
-import lol.unsession.mainDir
-import java.io.File
-
 object TestData {
     val names = listOf(
         "Мария",

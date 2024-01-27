@@ -3,10 +3,10 @@ package lol.unsession.db
 import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.Clock
 import lol.unsession.db.UnsessionSchema.Companion.dbQuery
+import lol.unsession.db.models.PagingFilterParameters
 import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
-import lol.unsession.db.wrapper.PagingFilterParameters
 import lol.unsession.findColumn
 import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.*
@@ -17,10 +17,11 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.random.Random
 
 // генерал рандом ахахахаха
-val generalRandom = Random(System.getenv("coderndseed").toInt())
+//val generalRandom = Random(System.getenv("coderndseed").toInt())
 
 class UnsessionSchema(private val database: Database) {
     object Users : Table("Users") {
+
         val id = integer("id").autoIncrement("users_id_seq").uniqueIndex()
         val username = varchar("username", 64)
         val email = varchar("email", 64).check {
