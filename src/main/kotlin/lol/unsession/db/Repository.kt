@@ -1,17 +1,15 @@
-package lol.unsession.db.repo
+package lol.unsession.db
 
 import kotlinx.datetime.Clock
-import lol.unsession.containsAnyKey
-import lol.unsession.containsAnyKeyNotIn
-import lol.unsession.db.UnsessionSchema
+import lol.unsession.db.Repository.Reviews.withRating
 import lol.unsession.db.UnsessionSchema.*
+import lol.unsession.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.db.UnsessionSchema.Teacher.create
-import lol.unsession.db.models.PagingFilterParameters
+import lol.unsession.db.models.Paging
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
 import lol.unsession.db.models.client.Review
-import lol.unsession.db.selectData
 import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
@@ -21,17 +19,27 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 interface TeachersRepoInterface {
     suspend fun getTeacher(id: Int): TeacherDto? // single object
-    suspend fun getTeachers(paging: PagingFilterParameters): List<TeacherDto>
+    suspend fun getTeachers(paging: Paging): List<TeacherDto>
     suspend fun addTeacher(teacher: TeacherDto): TeacherDto?
-    suspend fun searchTeachers(prompt: String, paging: PagingFilterParameters): List<TeacherDto>
+    suspend fun searchTeachers(prompt: String, paging: Paging): List<TeacherDto>
 }
 
 interface ReviewsRepoInterface {
     suspend fun getReview(id: Int): Review? // single object
-    suspend fun getReviews(paging: PagingFilterParameters): List<Review>
-    suspend fun getReviewsByTeacher(teacherId: Int, paging: PagingFilterParameters): List<Review>
-    suspend fun getReviewsByUser(userId: Int, paging: PagingFilterParameters): List<Review>
+    suspend fun getReviews(paging: Paging): List<Review>
+    suspend fun getReviewsByTeacher(teacherId: Int, paging: Paging): List<Review>
+    suspend fun getReviewsByUser(userId: Int, paging: Paging): List<Review>
     suspend fun addReview(review: Review): Review?
+    suspend fun calculateRatingForTeacher(teacherId: Int): Double?
+    suspend fun TeacherDto.withRating(): TeacherDto {
+        return TeacherDto(
+            this.id,
+            this.name,
+            this.email,
+            this.department,
+            calculateRatingForTeacher(this.id)
+        )
+    }
 }
 
 interface UsersDaoInterface {
@@ -61,77 +69,83 @@ sealed class Repository {
 
     object Teachers : TeachersRepoInterface {
         override suspend fun getTeacher(id: Int): TeacherDto? {
-            return Teacher.select { Teacher.id eq id }.map { Teacher.fromRow(it) }.firstOrNull()
+            return Teacher.select { Teacher.id eq id }.map { Teacher.fromRow(it) }.firstOrNull()?.withRating()
         }
 
-        override suspend fun getTeachers(paging: PagingFilterParameters): List<TeacherDto> {
-            return selectData(Teacher, paging).map { Teacher.fromRow(it) }
+        override suspend fun getTeachers(paging: Paging): List<TeacherDto> {
+            return selectData(Teacher.selectAll(), paging.page, paging.size).map { Teacher.fromRow(it).withRating() }
         }
 
         override suspend fun addTeacher(teacher: TeacherDto): TeacherDto? {
             return create(teacher)
         }
-
-        override suspend fun searchTeachers(prompt: String, paging: PagingFilterParameters): List<TeacherDto> {
-            return if ((paging.dataSelectParameters?.filters?.containsAnyKeyNotIn(Teacher.columns.map { it.name }) == true) && (paging.dataSelectParameters.filters.containsAnyKey(
-                    TeacherReview.columns.map { it.name }))
-            ) {
-                selectData(Teacher.join(TeacherReview, JoinType.INNER, additionalConstraint = {
-                    Teacher.id eq TeacherReview.teacherId
-                }), paging).map { Teacher.fromRow(it) }
-            } else {
-                selectData(
-                    columns = Teacher, query = Teacher.select { Teacher.name like "%$prompt%" }, pagingParameters = paging
-                ).map { Teacher.fromRow(it) }
-            }
+        override suspend fun searchTeachers(prompt: String, paging: Paging): List<TeacherDto> {
+            return selectData(
+                Teacher.select {
+                    (Teacher.name like "%$prompt%") or (Teacher.department like "%$prompt%")
+                },
+                paging.page,
+                paging.size
+            ).map { Teacher.fromRow(it).withRating() }
         }
     }
 
     object Reviews : ReviewsRepoInterface {
+        /**
+         * Если существует ревью с таким ид, то практически невозможно выпасть в null,
+         * для этого схему нужно будет ломать, но вдруг я что-то не предусмотрел*/
         override suspend fun getReview(id: Int): Review? {
             val review = TeacherReview.select { TeacherReview.id eq id }.map { TeacherReview.fromRow(it) }.firstOrNull()
                 ?: return null
-            val user = Users.getUser(review.userId) ?: return null
+            val user = Users.getUser(review.userId)
             val teacher = Teacher.select { Teacher.id eq review.teacherId }.map { Teacher.fromRow(it) }.firstOrNull()
                 ?: return null
-            return Review.fromReviewAndUser(review, user, teacher)
+            return user?.let { Review.fromReviewAndUser(review, it, teacher) }?: return null
         }
 
-        override suspend fun getReviews(paging: PagingFilterParameters): List<Review> {
-            return selectData(TeacherReview, paging).map { TeacherReview.fromRow(it).toReview() }
+        override suspend fun getReviews(paging: Paging): List<Review> {
+            return selectData(TeacherReview.selectAll(), paging.page, paging.size).map { TeacherReview.fromRow(it).toReview() }
         }
 
-        override suspend fun getReviewsByTeacher(teacherId: Int, paging: PagingFilterParameters): List<Review> {
-            return selectData(Teacher, Teacher.select(Teacher.id eq teacherId), paging).map { TeacherReview.fromRow(it).toReview() }
+        override suspend fun getReviewsByTeacher(teacherId: Int, paging: Paging): List<Review> {
+            return selectData(Teacher.selectAll(), paging.page, paging.size).map { TeacherReview.fromRow(it).toReview() }
         }
 
-        override suspend fun getReviewsByUser(userId: Int, paging: PagingFilterParameters): List<Review> {
-            return selectData(TeacherReview, TeacherReview.select(TeacherReview.userId eq userId), paging).map { TeacherReview.fromRow(it).toReview() }
+        override suspend fun getReviewsByUser(userId: Int, paging: Paging): List<Review> {
+            return selectData(TeacherReview.selectAll(), paging.page, paging.size).map { TeacherReview.fromRow(it).toReview() }
         }
 
         override suspend fun addReview(review: Review): Review? {
             return TeacherReview.create(review.toReviewDto())?.toReview()
+        }
+
+        override suspend fun calculateRatingForTeacher(teacherId: Int): Double {
+            val result = TeacherReview.select { TeacherReview.teacherId eq teacherId }.map { TeacherReview.fromRow(it) }
+            if (result.isEmpty()) {
+                return -1.0 // Нет ревью, нет рейтинга
+            }
+            return result.map { it.globalRating }.average()
         }
     }
 
     object Users : UsersDaoInterface {
 
         override suspend fun checkUsernameExists(username: String): Boolean {
-            return Companion.dbQuery {
+            return dbQuery {
                 UnsessionSchema.Users.select { UnsessionSchema.Users.username eq username }.firstOrNull() != null
             }
         }
 
         override suspend fun checkEmailExists(email: String): Boolean {
-            return Companion.dbQuery {
+            return dbQuery {
                 UnsessionSchema.Users.select { UnsessionSchema.Users.email eq email }.firstOrNull() != null
             }
         }
 
-        override suspend fun getUser(id: Int): User {
+        override suspend fun getUser(id: Int): User? {
             lateinit var user: ResultRow
             lateinit var permissions: List<String>
-            Companion.dbQuery {
+            return dbQuery {
                 user = UnsessionSchema.Users
                     .select { UnsessionSchema.Users.id eq id }
                     .firstOrNull() ?: return@dbQuery null
@@ -144,8 +158,8 @@ sealed class Repository {
                             it[Permissions.name]
                         }
                 }
+                return@dbQuery UnsessionSchema.Users.fromRow(user, permissions).toUser()
             }
-            return UnsessionSchema.Users.fromRow(user, permissions).toUser()
         }
 
         override suspend fun getUser(email: String, withPermissions: Boolean): User? {

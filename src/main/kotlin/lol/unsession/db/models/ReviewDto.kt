@@ -1,9 +1,9 @@
 package lol.unsession.db.models
 
 import kotlinx.serialization.Serializable
+import lol.unsession.db.Repository
 import lol.unsession.db.UnsessionSchema.TeacherReview
 import lol.unsession.db.models.client.Review
-import lol.unsession.db.repo.Repository
 import org.jetbrains.exposed.sql.ResultRow
 
 @Serializable

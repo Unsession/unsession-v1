@@ -1,4 +1,4 @@
-package lol.unsession.db.models
+package lol.unsession
 
 data class Config (
     val port: Int,

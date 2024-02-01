@@ -3,18 +3,13 @@ package lol.unsession.db
 import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.Clock
 import lol.unsession.db.UnsessionSchema.Companion.dbQuery
-import lol.unsession.db.models.PagingFilterParameters
 import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
-import lol.unsession.findColumn
 import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.wrap
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
-import kotlin.random.Random
 
 // генерал рандом ахахахаха
 //val generalRandom = Random(System.getenv("coderndseed").toInt())
@@ -318,102 +313,13 @@ class UnsessionSchema(private val database: Database) {
 }
 
 suspend fun selectData(
-    columns: ColumnSet,
-    pagingParameters: PagingFilterParameters
-): List<ResultRow> {
-    return dbQuery {
-        val params = pagingParameters.dataSelectParameters
-        fun filter(q: Query, c: String, v: Any) {
-            columns.findColumn(c)?.let { column ->
-                q.adjustWhere {
-                    column.eq(column.wrap(v))
-                }
-            }
-        }
-
-        fun andFilter(q: Query, c: String, v: Any) {
-            columns.findColumn(c)?.let { column ->
-                q.andWhere {
-                    column.eq(column.wrap(v))
-                }
-            }
-        }
-
-        val query = columns.selectAll()
-        params?.filters?.let {
-            params.filters.entries.toList()[0].let { (k, v) ->
-                filter(query, k, v)
-            }
-            if (params.filters.size > 1) {
-                for (i in 1 until params.filters.size) {
-                    params.filters.entries.toList()[i].let { (k, v) ->
-                        andFilter(query, k, v)
-                    }
-                }
-            }
-        }
-        query.limit(pagingParameters.pageSize, (pagingParameters.page * pagingParameters.pageSize).toLong())
-        params?.sort?.let { sorter ->
-            if (sorter.a) {
-                query.sortedBy {
-                    columns.findColumn(sorter.field)
-                }
-            } else {
-                query.sortedByDescending {
-                    columns.findColumn(sorter.field)
-                }
-            }
-        }
-        return@dbQuery query.toList()
-    }
-}
-
-suspend fun selectData(
-    columns: ColumnSet,
     query: Query,
-    pagingParameters: PagingFilterParameters
+    page: Int,
+    pageSize: Int
 ): List<ResultRow> {
     return dbQuery {
-        val params = pagingParameters.dataSelectParameters
-        fun filter(q: Query, c: String, v: Any) {
-            columns.findColumn(c)?.let { column ->
-                q.adjustWhere {
-                    column.eq(column.wrap(v))
-                }
-            }
-        }
-
-        fun andFilter(q: Query, c: String, v: Any) {
-            columns.findColumn(c)?.let { column ->
-                q.andWhere {
-                    column.eq(column.wrap(v))
-                }
-            }
-        }
-        params?.filters?.let {
-            params.filters.entries.toList()[0].let { (k, v) ->
-                filter(query, k, v)
-            }
-            if (params.filters.size > 1) {
-                for (i in 1 until params.filters.size) {
-                    params.filters.entries.toList()[i].let { (k, v) ->
-                        andFilter(query, k, v)
-                    }
-                }
-            }
-        }
-        query.limit(pagingParameters.pageSize, (pagingParameters.page * pagingParameters.pageSize).toLong())
-        params?.sort?.let { sorter ->
-            if (sorter.a) {
-                query.sortedBy {
-                    columns.findColumn(sorter.field)
-                }
-            } else {
-                query.sortedByDescending {
-                    columns.findColumn(sorter.field)
-                }
-            }
-        }
+        query.limit(pageSize, (page * pageSize).toLong())
         return@dbQuery query.toList()
     }
 }
+

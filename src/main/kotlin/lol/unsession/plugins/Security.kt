@@ -6,15 +6,13 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
-import lol.unsession.db.repo.Repository
+import lol.unsession.db.Repository
 import lol.unsession.getConfig
 import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
-import lol.unsession.security.utils.Crypto
 import lol.unsession.utils.getLogger
 import java.util.*
 
@@ -32,9 +30,7 @@ fun Application.configureSecurity() {
                 try {
                     val user = Repository.Users.getUser(credential.payload.getClaim("userId").asInt())
                     logger.debug("requested from token: $user")
-                    if (credential.payload.getClaim("username").asString() != "" &&
-                        user != null &&
-                        credential.expiresAt!!.time > Clock.System.now().toEpochMilliseconds()
+                    if (credential.payload.getClaim("username").asString() != "" && credential.expiresAt!!.time > Clock.System.now().toEpochMilliseconds()
                     ) {
                         JWTPrincipal(credential.payload)
                     } else {
@@ -53,29 +49,6 @@ fun Application.configureSecurity() {
             }
         }
     }
-
-    routing {
-        post("/login") {
-            val loginData = call.receive<User.UserLoginData>()
-
-            val user = Repository.Users.getUser(loginData.email)
-            if (user == null) call.respond(HttpStatusCode.Unauthorized)
-            if (user!!.isBanned) call.respond(HttpStatusCode.Unauthorized)
-
-            val storedLoginData = user.userLoginData
-            if (storedLoginData == null) call.respond(HttpStatusCode.Unauthorized)
-
-            if (!Crypto.checkPassword(
-                inputPassword = loginData.password,
-                salt = storedLoginData!!.salt!!,
-                storedHash = storedLoginData.password
-            )) call.respond(HttpStatusCode.Unauthorized)
-
-            val token = createToken(user)
-
-            call.respond(LoginResponse(token, user))
-        }
-    }
 }
 
 fun createToken(user: User): String {
@@ -84,7 +57,7 @@ fun createToken(user: User): String {
         .withClaim("userId", user.id)
         .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withClaim("username", user.name)
-        .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + 10_000))
+        .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + getConfig().tokenLifetime))
         .sign(Algorithm.HMAC512(getConfig().secret))
 }
 

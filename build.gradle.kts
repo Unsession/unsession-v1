@@ -79,7 +79,6 @@ dependencies {
 
     implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.0.0-beta-1")
-
     implementation ("com.google.code.gson:gson:2.10.1")
 
     testImplementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")

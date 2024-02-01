@@ -1,8 +1,6 @@
 package lol.unsession.db.models.client
 
 import kotlinx.serialization.Serializable
-import lol.unsession.db.UnsessionSchema
-import lol.unsession.db.UnsessionSchema.TeacherReview.comment
 import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.security.user.User

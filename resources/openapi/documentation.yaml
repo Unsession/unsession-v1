@@ -4,5 +4,149 @@ info:
   description: "unsessionserver API"
   version: "1.0.0"
 servers:
-- url: "https://unsessionserver"
-paths: {}
+- url: "http://unsession.lol:5050"
+paths:
+  /ping:
+    get:
+      description: ping-pong test
+      responses:
+        200:
+          description: Server is running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: pong
+  /register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginData'
+      responses:
+        '200':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid login data
+        '409':
+          description: User already exists
+  /login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginData'
+      responses:
+        '200':
+          description: User successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid login data
+        '401':
+          description: Invalid credentials
+  /api/v1/teachers:
+    get:
+      summary: Get all teachers
+      responses:
+        '200':
+          description: List of teachers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeacherDto'
+        '401':
+          description: Invalid credentials
+
+
+
+components:
+  schemas:
+    UserLoginData:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserDto'
+
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        salt:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        roleName:
+          type: string
+        bannedReason:
+          type: string
+        bannedUntil:
+          type: integer
+        created:
+          type: integer
+        lastLogin:
+          type: integer
+        lastIp:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - password
+        - salt
+        - permissions
+        - roleName
+        - created
+
+    TeacherDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        department:
+          type: string
+      required:
+        - id
+        - name
+        - department
+

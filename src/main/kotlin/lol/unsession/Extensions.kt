@@ -5,7 +5,6 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import kotlinx.datetime.Clock
-import lol.unsession.db.models.Config
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.ColumnSet
 
