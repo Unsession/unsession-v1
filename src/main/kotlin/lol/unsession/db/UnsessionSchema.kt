@@ -40,8 +40,8 @@ class UnsessionSchema(private val database: Database) {
 
         override val primaryKey = PrimaryKey(id)
 
-        fun create(user: UserDto): UserDto? {
-            if (transaction {
+        suspend fun create(user: UserDto): UserDto? {
+            if (dbQuery {
                     Users.insert {
                         it[username] = user.name
                         it[email] = user.email
@@ -147,9 +147,9 @@ class UnsessionSchema(private val database: Database) {
             )
         }
 
-        fun create(teacher: TeacherDto): TeacherDto? {
+        suspend fun create(teacher: TeacherDto): TeacherDto? {
             if (
-                transaction {
+                dbQuery {
                     Teacher.insert {
                         it[id] = teacher.id
                         it[name] = teacher.name
@@ -214,9 +214,9 @@ class UnsessionSchema(private val database: Database) {
             )
         }
 
-        fun create(review: ReviewDto): ReviewDto? {
+        suspend fun create(review: ReviewDto): ReviewDto? {
             if (
-                transaction {
+                dbQuery {
                     TeacherReview.insert {
                         it[userId] = review.userId
                         it[teacherId] = review.teacherId

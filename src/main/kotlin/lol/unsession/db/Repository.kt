@@ -1,6 +1,7 @@
 package lol.unsession.db
 
 import kotlinx.datetime.Clock
+import lol.unsession.Utils
 import lol.unsession.db.Repository.Reviews.withRating
 import lol.unsession.db.UnsessionSchema.*
 import lol.unsession.db.UnsessionSchema.Companion.dbQuery
@@ -13,6 +14,7 @@ import lol.unsession.db.models.client.Review
 import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
+import lol.unsession.test.TestSDK
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -69,7 +71,7 @@ sealed class Repository {
 
     object Teachers : TeachersRepoInterface {
         override suspend fun getTeacher(id: Int): TeacherDto? {
-            return Teacher.select { Teacher.id eq id }.map { Teacher.fromRow(it) }.firstOrNull()?.withRating()
+            return dbQuery { Teacher.select { Teacher.id eq id }.map { Teacher.fromRow(it) }.firstOrNull()?.withRating() }
         }
 
         override suspend fun getTeachers(paging: Paging): List<TeacherDto> {
@@ -79,6 +81,7 @@ sealed class Repository {
         override suspend fun addTeacher(teacher: TeacherDto): TeacherDto? {
             return create(teacher)
         }
+
         override suspend fun searchTeachers(prompt: String, paging: Paging): List<TeacherDto> {
             return selectData(
                 Teacher.select {
@@ -95,24 +98,34 @@ sealed class Repository {
          * Если существует ревью с таким ид, то практически невозможно выпасть в null,
          * для этого схему нужно будет ломать, но вдруг я что-то не предусмотрел*/
         override suspend fun getReview(id: Int): Review? {
-            val review = TeacherReview.select { TeacherReview.id eq id }.map { TeacherReview.fromRow(it) }.firstOrNull()
-                ?: return null
-            val user = Users.getUser(review.userId)
-            val teacher = Teacher.select { Teacher.id eq review.teacherId }.map { Teacher.fromRow(it) }.firstOrNull()
-                ?: return null
-            return user?.let { Review.fromReviewAndUser(review, it, teacher) }?: return null
+            return dbQuery {
+                val review =
+                    TeacherReview.select { TeacherReview.id eq id }.map { TeacherReview.fromRow(it) }.firstOrNull()
+                        ?: return@dbQuery null
+                val user = Users.getUser(review.userId)
+                val teacher =
+                    Teacher.select { Teacher.id eq review.teacherId }.map { Teacher.fromRow(it) }.firstOrNull()
+                        ?: return@dbQuery null
+                return@dbQuery user?.let { Review.fromReviewAndUser(review, it, teacher) } ?: return@dbQuery null
+            }
         }
 
         override suspend fun getReviews(paging: Paging): List<Review> {
-            return selectData(TeacherReview.selectAll(), paging.page, paging.size).map { TeacherReview.fromRow(it).toReview() }
+            return selectData(TeacherReview.selectAll(), paging.page, paging.size).map {
+                TeacherReview.fromRow(it).toReview()
+            }
         }
 
         override suspend fun getReviewsByTeacher(teacherId: Int, paging: Paging): List<Review> {
-            return selectData(Teacher.selectAll(), paging.page, paging.size).map { TeacherReview.fromRow(it).toReview() }
+            return selectData(Teacher.selectAll(), paging.page, paging.size).map {
+                TeacherReview.fromRow(it).toReview()
+            }
         }
 
         override suspend fun getReviewsByUser(userId: Int, paging: Paging): List<Review> {
-            return selectData(TeacherReview.selectAll(), paging.page, paging.size).map { TeacherReview.fromRow(it).toReview() }
+            return selectData(TeacherReview.selectAll(), paging.page, paging.size).map {
+                TeacherReview.fromRow(it).toReview()
+            }
         }
 
         override suspend fun addReview(review: Review): Review? {
@@ -163,7 +176,7 @@ sealed class Repository {
         }
 
         override suspend fun getUser(email: String, withPermissions: Boolean): User? {
-            return Companion.dbQuery {
+            return dbQuery {
                 var permissions: List<String> = listOf()
                 val user = UnsessionSchema.Users
                     .select { UnsessionSchema.Users.email eq email }
@@ -176,7 +189,7 @@ sealed class Repository {
         }
 
         override suspend fun deleteUser(id: Int): Boolean {
-            return Companion.dbQuery {
+            return dbQuery {
                 UnsessionSchema.Users.deleteWhere { UnsessionSchema.Users.id eq id } > 0
             }
         }
@@ -308,6 +321,52 @@ sealed class Repository {
                         it[UnsessionSchema.Users.salt],
                     )
                 }
+            }
+        }
+    }
+
+    object HolyTestObject {
+        suspend fun generateTestData(onExecuted: suspend (String) -> Unit) {
+            val teachersId = mutableListOf<Int>()
+            repeat(20) {
+                teachersId.add(
+                    Teachers.addTeacher(
+                        TeacherDto(TestSDK.globalPersonId, TestSDK.name, TestSDK.email, TestSDK.department)
+                    )!!.id
+                )
+            }
+            repeat(5) {
+                Users.tryRegisterUser(
+                    User.UserLoginData(
+                        TestSDK.username,
+                        TestSDK.email,
+                        TestSDK.password,
+                    ), "1.1.1.1",
+                    onSuccess = { user ->
+                        repeat(5) {
+                            Reviews.addReview(
+                                Review(
+                                    null,
+                                    user,
+                                    Teachers.getTeacher(teachersId.random())!!,
+                                    (1..5).random(),
+                                    (1..5).random(),
+                                    (1..5).random(),
+                                    (1..5).random(),
+                                    (1..5).random(),
+                                    (1..5).random(),
+                                    (1..5).random(),
+                                    (1..5).random(),
+                                    Utils.now,
+                                    TestSDK.lorem(
+                                        (6..20).random()
+                                    )
+                                )
+                            )
+                        }
+                        onExecuted("Test data generated successfully")
+                    }
+                )
             }
         }
     }

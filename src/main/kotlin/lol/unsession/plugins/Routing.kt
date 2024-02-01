@@ -15,6 +15,7 @@ import io.ktor.server.routing.*
 import io.ktor.util.logging.*
 import kotlinx.serialization.Serializable
 import lol.unsession.db.Repository
+import lol.unsession.db.Repository.HolyTestObject.generateTestData
 import lol.unsession.db.models.Paging
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.client.Review
@@ -53,11 +54,11 @@ fun Application.configureRouting() {
             val fileContent = Application::class.java.getResource("/static/zhdun")!!.readText(Charsets.UTF_8)
             call.respondText(fileContent)
         }
-//        get("/td") {
-//            generateTestData {
-//                call.respond(it)
-//            }
-//        }
+        get("/td") {
+            generateTestData {
+                call.respond(it)
+            }
+        }
         route("/v1") {
             route("users") {
                 post("/login") {
