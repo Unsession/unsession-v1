@@ -242,7 +242,7 @@ class UnsessionSchema(private val database: Database) {
     }
 
     init {
-        initial()
+        wipeInitial()
     }
 
     fun initial() {
@@ -273,15 +273,12 @@ class UnsessionSchema(private val database: Database) {
 
     fun wipeInitial() {
         transaction(database) {
-            //val schema = Schema("unsession", "postgres", System.getenv("pgpass"))
-            // drop all tables cascade
             exec(
                 """
                 DROP SCHEMA public CASCADE;
                 CREATE SCHEMA public;
             """.trimIndent()
             )
-            //SchemaUtils.createSchema(schema)
             SchemaUtils.create(Users, Codes, Teacher, TeacherReview, Permissions)
             Permissions.insertPermissions()
             SchemaUtils.create(UsersPermissions)

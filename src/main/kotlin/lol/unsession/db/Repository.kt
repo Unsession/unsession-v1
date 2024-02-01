@@ -85,7 +85,7 @@ sealed class Repository {
         override suspend fun searchTeachers(prompt: String, paging: Paging): List<TeacherDto> {
             return selectData(
                 Teacher.select {
-                    (Teacher.name like "%$prompt%") or (Teacher.department like "%$prompt%")
+                    (Teacher.name.lowerCase() like "%${prompt.lowercase()}%") or (Teacher.department.lowerCase() like "%${prompt.lowercase()}%")
                 },
                 paging.page,
                 paging.size
@@ -133,7 +133,8 @@ sealed class Repository {
         }
 
         override suspend fun calculateRatingForTeacher(teacherId: Int): Double {
-            val result = TeacherReview.select { TeacherReview.teacherId eq teacherId }.map { TeacherReview.fromRow(it) }
+            val result =
+                dbQuery { TeacherReview.select { TeacherReview.teacherId eq teacherId }.map { TeacherReview.fromRow(it) } }
             if (result.isEmpty()) {
                 return -1.0 // Нет ревью, нет рейтинга
             }

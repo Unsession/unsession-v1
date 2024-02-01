@@ -10,14 +10,13 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
 import lol.unsession.db.Repository
-import lol.unsession.getConfig
 import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
 import lol.unsession.utils.getLogger
 import java.util.*
 
 fun Application.configureSecurity() {
-    val secret = getConfig().secret
+    val secret = System.getenv("secret")
 
     install(Authentication) {
         jwt("user-auth") {
@@ -53,12 +52,12 @@ fun Application.configureSecurity() {
 
 fun createToken(user: User): String {
     return JWT.create()
-        .withIssuer("Unsession")
+        .withIssuer("unsession")
         .withClaim("userId", user.id)
         .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withClaim("username", user.name)
-        .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + getConfig().tokenLifetime))
-        .sign(Algorithm.HMAC512(getConfig().secret))
+        .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + System.getenv("tokenLifetime").toInt()))
+        .sign(Algorithm.HMAC512(System.getenv("secret")))
 }
 
 fun getPermissionsFromToken(token: String): HashSet<Access> {

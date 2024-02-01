@@ -8,6 +8,6 @@ data class Paging(
 ) {
     companion object {
         fun from(call: ApplicationCall): Paging =
-            Paging(call.parameters["page"]?.toIntOrNull() ?: 1, call.parameters["size"]?.toIntOrNull() ?: 20)
+            Paging(call.parameters["page"]?.toIntOrNull()?.minus(1)?: 0, call.parameters["size"]?.toIntOrNull() ?: 20)
     }
 }

@@ -1,6 +1,5 @@
 package lol.unsession.security.utils
 
-import lol.unsession.getConfig
 import java.security.SecureRandom
 import java.security.spec.KeySpec
 import javax.crypto.SecretKey
@@ -16,10 +15,10 @@ object Crypto {
         return salt
     }
 
-    private val ALGORITHM = getConfig().hashAlgorithm
-    private val ITERATIONS = getConfig().hashIterations
-    private val KEY_LENGTH = getConfig().hashKeyLength
-    private val SECRET = getConfig().secret
+    private val ALGORITHM = System.getenv("hashAlgorithm")
+    private val ITERATIONS = System.getenv("hashIterations").toInt()
+    private val KEY_LENGTH = System.getenv("hashKeyLength").toInt()
+    private val SECRET = System.getenv("secret")
 
     @OptIn(ExperimentalStdlibApi::class)
     fun generateHash(password: String, salt: String): String {

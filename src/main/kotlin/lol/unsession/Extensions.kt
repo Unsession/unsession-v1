@@ -48,7 +48,3 @@ fun readConfigJson(): String {
     val configStream = Thread.currentThread().contextClassLoader.getResourceAsStream("config.json")
     return configStream!!.reader().readText()
 }
-
-fun getConfig(): Config {
-    return gson.fromJson(readConfigJson(), Config::class.java)!!
-}

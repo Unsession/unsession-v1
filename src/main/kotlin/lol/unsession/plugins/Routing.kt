@@ -60,7 +60,7 @@ fun Application.configureRouting() {
             }
         }
         route("/v1") {
-            route("users") {
+            route("/users") {
                 post("/login") {
                     val loginData = call.receive<User.UserLoginData>()
 
