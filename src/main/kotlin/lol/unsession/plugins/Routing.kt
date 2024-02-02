@@ -9,10 +9,12 @@ import io.ktor.server.plugins.*
 import io.ktor.server.plugins.autohead.*
 import io.ktor.server.plugins.partialcontent.*
 import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.plugins.swagger.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.logging.*
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import lol.unsession.db.Repository
 import lol.unsession.db.Repository.HolyTestObject.generateTestData
@@ -47,10 +49,12 @@ fun Application.configureRouting() {
     }
 
     routing {
+        swaggerUI("swagger", "openapi/documentation.yaml")
         get("/ping") {
             call.respondText("pong")
         }
         get("/") {
+            delay(10000)
             val fileContent = Application::class.java.getResource("/static/zhdun")!!.readText(Charsets.UTF_8)
             call.respondText(fileContent)
         }
@@ -161,7 +165,7 @@ fun Application.configureRouting() {
                     }
                 }
                 get("/get") {
-                    verify(TeachersReviewing)
+                    verify(Teachers)
                     val params = Paging.from(call)
                     val reviews = Repository.Reviews.getReviews(params).onEach { it.user.clearPersonalData() }
                     call.respond(reviews)
@@ -183,8 +187,7 @@ fun Application.configureRouting() {
                     verify(Teachers)
                     val params = Paging.from(call)
                     val teacherId = call.request.queryParameters["teacherId"]?.toIntOrNull()
-                    val userId = call.request.queryParameters["userId"]?.toIntOrNull()
-                    if (teacherId == null || userId == null) {
+                    if (teacherId == null) {
                         call.respond(HttpStatusCode.BadRequest)
                     }
                     val reviews =

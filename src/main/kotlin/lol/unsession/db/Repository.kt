@@ -6,6 +6,7 @@ import lol.unsession.db.Repository.Reviews.withRating
 import lol.unsession.db.UnsessionSchema.*
 import lol.unsession.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.db.UnsessionSchema.Teacher.create
+import lol.unsession.db.UnsessionSchema.Users.id
 import lol.unsession.db.models.Paging
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
@@ -117,13 +118,13 @@ sealed class Repository {
         }
 
         override suspend fun getReviewsByTeacher(teacherId: Int, paging: Paging): List<Review> {
-            return selectData(Teacher.selectAll(), paging.page, paging.size).map {
+            return selectData(TeacherReview.select(TeacherReview.teacherId eq teacherId), paging.page, paging.size).map {
                 TeacherReview.fromRow(it).toReview()
             }
         }
 
         override suspend fun getReviewsByUser(userId: Int, paging: Paging): List<Review> {
-            return selectData(TeacherReview.selectAll(), paging.page, paging.size).map {
+            return selectData(TeacherReview.select(id eq userId), paging.page, paging.size).map {
                 TeacherReview.fromRow(it).toReview()
             }
         }
@@ -183,7 +184,7 @@ sealed class Repository {
                     .select { UnsessionSchema.Users.email eq email }
                     .singleOrNull() ?: return@dbQuery null
                 if (withPermissions) {
-                    permissions = UsersPermissions.getPermissions(user[UnsessionSchema.Users.id])
+                    permissions = UsersPermissions.getPermissions(user[id])
                 }
                 UnsessionSchema.Users.fromRow(user, permissions)
             }?.toUser()

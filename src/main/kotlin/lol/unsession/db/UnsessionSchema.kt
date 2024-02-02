@@ -242,7 +242,7 @@ class UnsessionSchema(private val database: Database) {
     }
 
     init {
-        wipeInitial()
+        initial()
     }
 
     fun initial() {
