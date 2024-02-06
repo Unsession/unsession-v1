@@ -7,11 +7,11 @@ data class AccountRole(
     val permissions: HashSet<Access>,
     val description: String,
 )
-
+val bannedP = setOf<Access>()
 val userP = setOf(
     Teachers,
     TeachersReviewing
-)
+) + bannedP
 val vUserP = setOf(
     TeachersReviewing,
     Homeworks,
@@ -64,5 +64,12 @@ enum class Roles(val roleData: AccountRole) {
             userP.toHashSet(),
             "User has general read permissions for 'Legit content'",
         )
-    );
+    ),
+    Banned(
+        AccountRole(
+            "Banned",
+            bannedP.toHashSet(),
+            "Banned user has no access to anything.",
+        )
+    ),
 }

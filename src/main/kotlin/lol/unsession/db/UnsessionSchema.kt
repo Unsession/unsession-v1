@@ -8,6 +8,8 @@ import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
 import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -169,28 +171,30 @@ class UnsessionSchema(private val database: Database) {
         val id = integer("id").autoIncrement().uniqueIndex()
         val userId = integer("user").references(Users.id)
         val teacherId = integer("teacher").references(Teacher.id)
+        private fun rating(it: Column<*>) = it greaterEq 0 and (it lessEq 5)
 
-        val global_rating = integer("global_review").check("check_global_review") { it greaterEq 0 and (it lessEq 5) }
+        val global_rating =
+            integer("global_review").check("check_global_review") { rating(it) }
         val labs_rating =
-            integer("labs_review").check("check_labs_review") { it greaterEq 0 and (it lessEq 5) }
+            integer("labs_review").check("check_labs_review") { rating(it) }
                 .nullable()
         val hw_rating =
-            integer("homework_review").check("check_hw_review") { it greaterEq 0 and (it lessEq 5) }
+            integer("homework_review").check("check_hw_review") { rating(it) }
                 .nullable()
         val exam_rating =
-            integer("exam_review").check("check_exam_review") { it greaterEq 0 and (it lessEq 5) }
+            integer("exam_review").check("check_exam_review") { rating(it) }
                 .nullable()
         val kindness_rating =
-            integer("kindness_review").check("check_kindness_review") { it greaterEq 0 and (it lessEq 5) }
+            integer("kindness_review").check("check_kindness_review") { rating(it) }
                 .nullable()
         val responsibility_rating =
-            integer("responsibility_review").check("check_responsibility_review") { it greaterEq 0 and (it lessEq 5) }
+            integer("responsibility_review").check("check_responsibility_review") { rating(it) }
                 .nullable()
         val individuality_rating =
-            integer("individuality_review").check("check_individuality_review") { it greaterEq 0 and (it lessEq 5) }
+            integer("individuality_review").check("check_individuality_review") { rating(it) }
                 .nullable()
         val humor_rating =
-            integer("humor_review").check("check_humor_review") { it greaterEq 0 and (it lessEq 5) }
+            integer("humor_review").check("check_humor_review") { rating(it) }
                 .nullable()
 
         val comment = varchar("comment", 1024).nullable()

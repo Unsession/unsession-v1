@@ -118,7 +118,7 @@ sealed class Repository {
         }
 
         override suspend fun getReviewsByTeacher(teacherId: Int, paging: Paging): List<Review> {
-            return selectData(TeacherReview.select(TeacherReview.teacherId eq teacherId), paging.page, paging.size).map {
+            return selectData(TeacherReview.select(TeacherReview.teacherId eq teacherId).orderBy(TeacherReview.created, SortOrder.DESC), paging.page, paging.size).map {
                 TeacherReview.fromRow(it).toReview()
             }
         }

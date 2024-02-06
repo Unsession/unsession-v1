@@ -21,6 +21,7 @@ import lol.unsession.db.Repository.HolyTestObject.generateTestData
 import lol.unsession.db.models.Paging
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.client.Review
+import lol.unsession.getResourceUri
 import lol.unsession.security.permissions.Access.*
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
@@ -55,7 +56,7 @@ fun Application.configureRouting() {
         }
         get("/") {
             delay(10000)
-            val fileContent = Application::class.java.getResource("/static/zhdun")!!.readText(Charsets.UTF_8)
+            val fileContent = getResourceUri("static/zhdun").readText()
             call.respondText(fileContent)
         }
         get("/td") {

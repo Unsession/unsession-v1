@@ -7,6 +7,8 @@ import io.ktor.server.config.*
 import kotlinx.datetime.Clock
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.ColumnSet
+import java.io.FileNotFoundException
+import java.net.URL
 
 val gson = Gson()
 
@@ -44,7 +46,6 @@ fun Application.env(name: String): ApplicationConfigValue {
     return this.environment.config.property(name)
 }
 
-fun readConfigJson(): String {
-    val configStream = Thread.currentThread().contextClassLoader.getResourceAsStream("config.json")
-    return configStream!!.reader().readText()
+fun getResourceUri(path: String): URL {
+    return Application::class.java.getResource(path)?: throw FileNotFoundException("Resource not found: $path")
 }

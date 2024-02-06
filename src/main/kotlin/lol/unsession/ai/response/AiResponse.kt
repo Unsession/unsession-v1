@@ -5,6 +5,6 @@ import com.google.gson.annotations.SerializedName
 
 data class AiResponse (
 
-  @SerializedName("result" ) var result : Result? = Result()
+  @SerializedName("result" ) var aiResult : AiResult? = AiResult()
 
 )
