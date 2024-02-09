@@ -16,11 +16,12 @@ import io.ktor.server.routing.*
 import io.ktor.util.logging.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import lol.unsession.Utils
 import lol.unsession.db.Repository
 import lol.unsession.db.Repository.HolyTestObject.generateTestData
 import lol.unsession.db.models.Paging
+import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
-import lol.unsession.db.models.client.Review
 import lol.unsession.getResourceUri
 import lol.unsession.security.permissions.Access.*
 import lol.unsession.security.user.User
@@ -55,7 +56,7 @@ fun Application.configureRouting() {
             call.respondText("pong")
         }
         get("/") {
-            delay(10000)
+            delay(30000)
             val fileContent = getResourceUri("static/zhdun").readText()
             call.respondText(fileContent)
         }
@@ -156,9 +157,16 @@ fun Application.configureRouting() {
             route("/reviews") {
                 post("/create") {
                     verify(Teachers, TeachersReviewing)
+                    val userData = call.getUserDataFromToken()
                     val newReview =
-                        call.receiveNullable<Review>() ?: return@post call.respond(HttpStatusCode.BadRequest)
-                    val review = Repository.Reviews.addReview(newReview)
+                        call.receive<ReviewDto>()
+                    val serverReview = newReview.copy(
+                        id = null,
+                        userId = userData.id,
+                        createdTimestamp = Utils.now,
+                        comment = newReview.comment
+                    )
+                    val review = Repository.Reviews.addReview(serverReview)
                     if (review != null) {
                         call.respond(HttpStatusCode.OK)
                     } else {
@@ -168,7 +176,7 @@ fun Application.configureRouting() {
                 get("/get") {
                     verify(Teachers)
                     val params = Paging.from(call)
-                    val reviews = Repository.Reviews.getReviews(params).onEach { it.user.clearPersonalData() }
+                    val reviews = Repository.Reviews.getReviews(params).onEach { it.user!!.clearPersonalData() }
                     call.respond(reviews)
                 }
                 get("/getById") {
@@ -177,7 +185,7 @@ fun Application.configureRouting() {
                     if (id == null) {
                         call.respond(HttpStatusCode.BadRequest, "No id specified")
                     }
-                    val review = Repository.Reviews.getReview(id!!).apply { this?.user?.clearPersonalData() }
+                    val review = Repository.Reviews.getReview(id!!).apply { this!!.user!!.clearPersonalData() }
                     if (review == null) {
                         call.respond(HttpStatusCode.NotFound)
                     } else {
@@ -193,7 +201,7 @@ fun Application.configureRouting() {
                     }
                     val reviews =
                         Repository.Reviews.getReviewsByTeacher(teacherId!!, params)
-                            .onEach { it.user.clearPersonalData() }
+                            .onEach { it.user!!.clearPersonalData() }
                     call.respond(reviews)
                 }
                 get("/getByUser") {
@@ -202,7 +210,7 @@ fun Application.configureRouting() {
                     val userId = call.request.queryParameters["userId"]?.toIntOrNull()
                     if (userId != null) {
                         val reviews =
-                            Repository.Reviews.getReviewsByUser(userId, params).onEach { it.user.clearPersonalData() }
+                            Repository.Reviews.getReviewsByUser(userId, params).onEach { it.user!!.clearPersonalData() }
                         call.respond(reviews)
                     } else {
                         call.respond(HttpStatusCode.BadRequest)

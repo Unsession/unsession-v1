@@ -173,28 +173,24 @@ class UnsessionSchema(private val database: Database) {
         val teacherId = integer("teacher").references(Teacher.id)
         private fun rating(it: Column<*>) = it greaterEq 0 and (it lessEq 5)
 
+        // Общий рейтинг, Сложность, Душность, Токсичность, Образовательная ценность, Личные качества
+
         val global_rating =
             integer("global_review").check("check_global_review") { rating(it) }
-        val labs_rating =
-            integer("labs_review").check("check_labs_review") { rating(it) }
+        val difficulty_rating =
+            integer("difficulty_review").check("check_difficulty_review") { rating(it) }
                 .nullable()
-        val hw_rating =
-            integer("homework_review").check("check_hw_review") { rating(it) }
+        val boredom_rating =
+            integer("boredom_review").check("check_boredom_review") { rating(it) }
                 .nullable()
-        val exam_rating =
-            integer("exam_review").check("check_exam_review") { rating(it) }
+        val toxicity_rating =
+            integer("toxicity_review").check("check_toxicity_review") { rating(it) }
                 .nullable()
-        val kindness_rating =
-            integer("kindness_review").check("check_kindness_review") { rating(it) }
+        val educational_value_rating =
+            integer("educational_value_review").check("check_educational_value_review") { rating(it) }
                 .nullable()
-        val responsibility_rating =
-            integer("responsibility_review").check("check_responsibility_review") { rating(it) }
-                .nullable()
-        val individuality_rating =
-            integer("individuality_review").check("check_individuality_review") { rating(it) }
-                .nullable()
-        val humor_rating =
-            integer("humor_review").check("check_humor_review") { rating(it) }
+        val personal_qualities_rating =
+            integer("personal_qualities_review").check("check_personal_qualities_review") { rating(it) }
                 .nullable()
 
         val comment = varchar("comment", 1024).nullable()
@@ -206,13 +202,11 @@ class UnsessionSchema(private val database: Database) {
                 row[userId],
                 row[teacherId],
                 row[global_rating],
-                row[labs_rating],
-                row[hw_rating],
-                row[exam_rating],
-                row[kindness_rating],
-                row[responsibility_rating],
-                row[individuality_rating],
-                row[humor_rating],
+                row[difficulty_rating],
+                row[boredom_rating],
+                row[toxicity_rating],
+                row[educational_value_rating],
+                row[personal_qualities_rating],
                 row[created],
                 row[comment],
             )
@@ -225,13 +219,11 @@ class UnsessionSchema(private val database: Database) {
                         it[userId] = review.userId
                         it[teacherId] = review.teacherId
                         it[global_rating] = review.globalRating
-                        it[labs_rating] = review.labsRating
-                        it[hw_rating] = review.hwRating
-                        it[exam_rating] = review.examRating
-                        it[kindness_rating] = review.kindness
-                        it[responsibility_rating] = review.responsibility
-                        it[individuality_rating] = review.individuality
-                        it[humor_rating] = review.humour
+                        it[difficulty_rating] = review.difficultyRating
+                        it[boredom_rating] = review.boredomRating
+                        it[toxicity_rating] = review.toxicityRating
+                        it[educational_value_rating] = review.educationalValueRating
+                        it[personal_qualities_rating] = review.personalQualitiesRating
                         it[created] = review.createdTimestamp
                         it[comment] = review.comment
                     }

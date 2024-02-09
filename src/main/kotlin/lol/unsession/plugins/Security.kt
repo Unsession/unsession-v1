@@ -87,3 +87,18 @@ suspend fun RoutingContext.verify(vararg access: Access) {
         return
     }
 }
+
+data class TokenUserData(
+    val id: Int,
+    val name: String,
+    val permissions: HashSet<Access>
+)
+
+fun ApplicationCall.getUserDataFromToken(): TokenUserData {
+    val token = this.request.headers["Authorization"]?.removePrefix("Bearer ") ?: throw Exception("No token")
+    val decodedToken = JWT.decode(token)
+    val userId = decodedToken.getClaim("userId").asInt()
+    val username = decodedToken.getClaim("username").asString()
+    val permissions = getPermissionsFromToken(token)
+    return TokenUserData(userId, username, permissions)
+}

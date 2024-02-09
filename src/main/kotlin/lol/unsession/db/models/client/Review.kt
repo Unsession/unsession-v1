@@ -8,20 +8,17 @@ import lol.unsession.security.user.User
 @Serializable
 data class Review (
     val id: Int?,
-    val user: User,
+    val user: User?,
     val teacher: TeacherDto,
 
     val globalRating: Int,
-    val labsRating: Int?,
-    val hwRating: Int?,
-    val examRating: Int?,
+    val difficultyRating: Int?,
+    val boredomRating: Int?,
+    val toxicityRating: Int?,
+    val educationalValueRating: Int?,
+    val personalQualitiesRating: Int?,
 
-    val kindness: Int?,
-    val responsibility: Int?,
-    val individuality: Int?,
-    val humour: Int?,
-
-    val createdTimestamp: Int,
+    val createdTimestamp: Int?,
     val comment: String?,
 ) {
     companion object {
@@ -31,13 +28,11 @@ data class Review (
                 user,
                 teacher,
                 review.globalRating,
-                review.labsRating,
-                review.hwRating,
-                review.examRating,
-                review.kindness,
-                review.responsibility,
-                review.individuality,
-                review.humour,
+                review.difficultyRating,
+                review.boredomRating,
+                review.toxicityRating,
+                review.educationalValueRating,
+                review.personalQualitiesRating,
                 review.createdTimestamp,
                 review.comment
             )
@@ -46,17 +41,15 @@ data class Review (
     fun toReviewDto(): ReviewDto {
         return ReviewDto(
             id = null,
-            userId = user.id,
+            userId = user!!.id,
             teacherId = teacher.id,
             globalRating = globalRating,
-            labsRating = labsRating,
-            hwRating = hwRating,
-            examRating = examRating,
-            kindness = kindness,
-            responsibility = responsibility,
-            individuality = individuality,
-            humour = humour,
-            createdTimestamp = createdTimestamp,
+            difficultyRating = difficultyRating,
+            boredomRating = boredomRating,
+            toxicityRating = toxicityRating,
+            educationalValueRating = educationalValueRating,
+            personalQualitiesRating = personalQualitiesRating,
+            createdTimestamp = createdTimestamp?: -1,
             comment = comment
         )
     }

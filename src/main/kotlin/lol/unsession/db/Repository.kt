@@ -8,6 +8,7 @@ import lol.unsession.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.db.UnsessionSchema.Teacher.create
 import lol.unsession.db.UnsessionSchema.Users.id
 import lol.unsession.db.models.Paging
+import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
@@ -32,7 +33,7 @@ interface ReviewsRepoInterface {
     suspend fun getReviews(paging: Paging): List<Review>
     suspend fun getReviewsByTeacher(teacherId: Int, paging: Paging): List<Review>
     suspend fun getReviewsByUser(userId: Int, paging: Paging): List<Review>
-    suspend fun addReview(review: Review): Review?
+    suspend fun addReview(review: ReviewDto): ReviewDto?
     suspend fun calculateRatingForTeacher(teacherId: Int): Double?
     suspend fun TeacherDto.withRating(): TeacherDto {
         return TeacherDto(
@@ -129,8 +130,8 @@ sealed class Repository {
             }
         }
 
-        override suspend fun addReview(review: Review): Review? {
-            return TeacherReview.create(review.toReviewDto())?.toReview()
+        override suspend fun addReview(review: ReviewDto): ReviewDto? {
+            return TeacherReview.create(review)
         }
 
         override suspend fun calculateRatingForTeacher(teacherId: Int): Double {
@@ -347,12 +348,10 @@ sealed class Repository {
                     onSuccess = { user ->
                         repeat(5) {
                             Reviews.addReview(
-                                Review(
+                                ReviewDto(
                                     null,
-                                    user,
-                                    Teachers.getTeacher(teachersId.random())!!,
-                                    (1..5).random(),
-                                    (1..5).random(),
+                                    user.id,
+                                    teachersId.random(),
                                     (1..5).random(),
                                     (1..5).random(),
                                     (1..5).random(),

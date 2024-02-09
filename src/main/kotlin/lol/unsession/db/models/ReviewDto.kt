@@ -7,23 +7,20 @@ import lol.unsession.db.models.client.Review
 import org.jetbrains.exposed.sql.ResultRow
 
 @Serializable
-data class ReviewDto (
-    val id: Int?,
+data class ReviewDto(
+    val id: Int? = null,
     val userId: Int,
     val teacherId: Int,
 
     val globalRating: Int,
-    val labsRating: Int?,
-    val hwRating: Int?,
-    val examRating: Int?,
-
-    val kindness: Int?,
-    val responsibility: Int?,
-    val individuality: Int?,
-    val humour: Int?,
+    val difficultyRating: Int? = null,
+    val boredomRating: Int? = null,
+    val toxicityRating: Int? = null,
+    val educationalValueRating: Int? = null,
+    val personalQualitiesRating: Int? = null,
 
     val createdTimestamp: Int,
-    val comment: String?,
+    val comment: String? = null,
 ) {
     companion object {
         fun ResultRow.toReviewDto(): ReviewDto {
@@ -32,13 +29,11 @@ data class ReviewDto (
                 this[TeacherReview.userId],
                 this[TeacherReview.teacherId],
                 this[TeacherReview.global_rating],
-                this[TeacherReview.labs_rating],
-                this[TeacherReview.hw_rating],
-                this[TeacherReview.exam_rating],
-                this[TeacherReview.kindness_rating],
-                this[TeacherReview.responsibility_rating],
-                this[TeacherReview.individuality_rating],
-                this[TeacherReview.humor_rating],
+                this[TeacherReview.difficulty_rating],
+                this[TeacherReview.boredom_rating],
+                this[TeacherReview.toxicity_rating],
+                this[TeacherReview.educational_value_rating],
+                this[TeacherReview.personal_qualities_rating],
                 this[TeacherReview.created],
                 this[TeacherReview.comment],
             )
