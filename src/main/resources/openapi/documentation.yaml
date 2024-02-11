@@ -4,9 +4,103 @@ info:
   description: "unsessionserver API"
   version: "1.0.0"
 servers:
-  - url: "https://api.unsession.su"
+  - url: "https://unsessionserver"
 paths:
   /:
+    get:
+      description: ""
+      responses:
+        "500":
+          description: "Internal Server Error"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: ""
+        "200":
+          description: "OK"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+  /admin/reviews/delete:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "id"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "304":
+          description: "Not Modified"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /admin/server/dropDatabase:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "500":
+          description: "Internal Server Error"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: ""
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /admin/server/log:
     get:
       description: ""
       responses:
@@ -16,6 +110,233 @@ paths:
             text/plain:
               schema:
                 type: "string"
+  /admin/server/shutdown:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "500":
+          description: "Internal Server Error"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: ""
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /admin/users/ban:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "id"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "reason"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "until"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /admin/users/delete:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "id"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "500":
+          description: "Internal Server Error"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: ""
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "304":
+          description: "Not Modified"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /admin/users/get:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/User"
+  /admin/users/setRole:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "id"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "role"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /admin/users/unban:
+    get:
+      description: ""
+      parameters:
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+        - name: "id"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "object"
   /ping:
     get:
       description: ""
@@ -59,6 +380,17 @@ paths:
           required: false
           schema:
             type: "string"
+        - name: "Authorization"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: "#/components/schemas/ReviewDto"
+        required: true
       responses:
         "403":
           description: "Forbidden"
@@ -66,12 +398,15 @@ paths:
             '*/*':
               schema:
                 type: "object"
-        "400":
-          description: "Bad Request"
+        "500":
+          description: "Internal Server Error"
           content:
-            '*/*':
+            text/plain:
               schema:
-                type: "object"
+                type: "string"
+              examples:
+                Example#1:
+                  value: ""
         "200":
           description: "OK"
           content:
@@ -424,6 +759,12 @@ paths:
             '*/*':
               schema:
                 type: "object"
+        "403":
+          description: "Forbidden"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BanData"
         "200":
           description: "OK"
           content:
@@ -544,6 +885,41 @@ components:
         - "name"
         - "permissions"
         - "roleName"
+    ReviewDto:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+          format: "int32"
+        userId:
+          type: "integer"
+          format: "int32"
+        teacherId:
+          type: "integer"
+          format: "int32"
+        globalRating:
+          type: "integer"
+          format: "int32"
+        difficultyRating:
+          type: "integer"
+          format: "int32"
+        boredomRating:
+          type: "integer"
+          format: "int32"
+        toxicityRating:
+          type: "integer"
+          format: "int32"
+        educationalValueRating:
+          type: "integer"
+          format: "int32"
+        personalQualitiesRating:
+          type: "integer"
+          format: "int32"
+        createdTimestamp:
+          type: "integer"
+          format: "int32"
+        comment:
+          type: "string"
     TeacherDto:
       type: "object"
       properties:
@@ -575,25 +951,19 @@ components:
         globalRating:
           type: "integer"
           format: "int32"
-        labsRating:
+        difficultyRating:
           type: "integer"
           format: "int32"
-        hwRating:
+        boredomRating:
           type: "integer"
           format: "int32"
-        examRating:
+        toxicityRating:
           type: "integer"
           format: "int32"
-        kindness:
+        educationalValueRating:
           type: "integer"
           format: "int32"
-        responsibility:
-          type: "integer"
-          format: "int32"
-        individuality:
-          type: "integer"
-          format: "int32"
-        humour:
+        personalQualitiesRating:
           type: "integer"
           format: "int32"
         createdTimestamp:
@@ -602,7 +972,6 @@ components:
         comment:
           type: "string"
       required:
-        - "user"
         - "teacher"
     LoginResponse:
       type: "object"

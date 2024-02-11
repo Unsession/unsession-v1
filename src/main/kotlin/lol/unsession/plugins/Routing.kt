@@ -24,9 +24,12 @@ import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.getResourceUri
 import lol.unsession.security.permissions.Access.*
+import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
 import lol.unsession.utils.getLogger
+import java.io.File
+import kotlin.system.exitProcess
 
 val logger = getLogger("Routing")
 
@@ -72,7 +75,7 @@ fun Application.configureRouting() {
 
                     val user = Repository.Users.getUser(loginData.email)
                     if (user == null) call.respond(HttpStatusCode.Unauthorized)
-                    if (user!!.isBanned) call.respond(HttpStatusCode.Unauthorized)
+                    if (user!!.isBanned) call.respond(HttpStatusCode.Forbidden, user.banData!!)
 
                     val storedLoginData = user.userLoginData
                     if (storedLoginData == null) call.respond(HttpStatusCode.Unauthorized)
@@ -153,67 +156,172 @@ fun Application.configureRouting() {
                         }
                     }
                 }
+                route("/reviews") {
+                    post("/create") {
+                        verify(Teachers, TeachersReviewing)
+                        val userData = call.getUserDataFromToken()
+                        val newReview =
+                            call.receive<ReviewDto>()
+                        val serverReview = newReview.copy(
+                            id = null,
+                            userId = userData.id,
+                            createdTimestamp = Utils.now,
+                            comment = newReview.comment
+                        )
+                        val review = Repository.Reviews.addReview(serverReview)
+                        if (review != null) {
+                            call.respond(HttpStatusCode.OK)
+                        } else {
+                            call.respond(HttpStatusCode.NotModified)
+                        }
+                    }
+                    get("/get") {
+                        verify(Teachers)
+                        val params = Paging.from(call)
+                        val reviews = Repository.Reviews.getReviews(params).onEach { it.user!!.clearPersonalData() }
+                        call.respond(reviews)
+                    }
+                    get("/getById") {
+                        verify(Teachers)
+                        val id = call.request.queryParameters["id"]?.toIntOrNull()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, "No id specified")
+                        }
+                        val review = Repository.Reviews.getReview(id!!).apply { this!!.user!!.clearPersonalData() }
+                        if (review == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            call.respond(review)
+                        }
+                    }
+                    get("/getByTeacher") {
+                        verify(Teachers)
+                        val params = Paging.from(call)
+                        val teacherId = call.request.queryParameters["teacherId"]?.toIntOrNull()
+                        if (teacherId == null) {
+                            call.respond(HttpStatusCode.BadRequest)
+                        }
+                        val reviews =
+                            Repository.Reviews.getReviewsByTeacher(teacherId!!, params)
+                                .onEach { it.user!!.clearPersonalData() }
+                        call.respond(reviews)
+                    }
+                    get("/getByUser") {
+                        verify(Teachers)
+                        val params = Paging.from(call)
+                        val userId = call.request.queryParameters["userId"]?.toIntOrNull()
+                        if (userId != null) {
+                            val reviews =
+                                Repository.Reviews.getReviewsByUser(userId, params)
+                                    .onEach { it.user!!.clearPersonalData() }
+                            call.respond(reviews)
+                        } else {
+                            call.respond(HttpStatusCode.BadRequest)
+                        }
+                    }
+                }
             }
-            route("/reviews") {
-                post("/create") {
-                    verify(Teachers, TeachersReviewing)
-                    val userData = call.getUserDataFromToken()
-                    val newReview =
-                        call.receive<ReviewDto>()
-                    val serverReview = newReview.copy(
-                        id = null,
-                        userId = userData.id,
-                        createdTimestamp = Utils.now,
-                        comment = newReview.comment
+        }
+        route("/admin") {
+            route("/users") {
+                get("/get") {
+                    verify(Users)
+                    call.respond(Repository.Users.getUsers())
+                }
+                get("/ban") {
+                    verify(Users, UsersBlocking)
+                    val id = call.request.queryParameters["id"]?.toIntOrNull() ?: return@get call.respond(
+                        HttpStatusCode.BadRequest
                     )
-                    val review = Repository.Reviews.addReview(serverReview)
-                    if (review != null) {
+                    val reason =
+                        call.request.queryParameters["reason"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                    val until = call.request.queryParameters["until"]?.toIntOrNull() ?: return@get call.respond(
+                        HttpStatusCode.BadRequest
+                    )
+                    Repository.Users.banUser(
+                        id = id,
+                        reason = reason,
+                        until = until
+                    )
+                    call.respond(HttpStatusCode.Created)
+                }
+                get("/unban") {
+                    verify(Users, UsersBlocking)
+                    val id = call.request.queryParameters["id"]?.toIntOrNull() ?: return@get call.respond(
+                        HttpStatusCode.BadRequest
+                    )
+                    Repository.Users.banUser(
+                        id = id,
+                        reason = "",
+                        until = 0
+                    )
+                    call.respond(HttpStatusCode.Created)
+                }
+                get("/delete") {
+                    verify(Users, UsersRemoving)
+                    logger.warn("WARNING: Used danger method DELETEUSER by user: ${call.getUserDataFromToken().id}")
+                    val id = call.request.queryParameters["id"]?.toIntOrNull() ?: return@get call.respond(
+                        HttpStatusCode.BadRequest
+                    )
+                    if (Repository.Users.removeUser(id)) {
                         call.respond(HttpStatusCode.OK)
                     } else {
                         call.respond(HttpStatusCode.NotModified)
                     }
                 }
-                get("/get") {
-                    verify(Teachers)
-                    val params = Paging.from(call)
-                    val reviews = Repository.Reviews.getReviews(params).onEach { it.user!!.clearPersonalData() }
-                    call.respond(reviews)
-                }
-                get("/getById") {
-                    verify(Teachers)
-                    val id = call.request.queryParameters["id"]?.toIntOrNull()
-                    if (id == null) {
-                        call.respond(HttpStatusCode.BadRequest, "No id specified")
+                get("/setRole") {
+                    verify(Users, UsersRolesChanging)
+                    val id = call.request.queryParameters["id"]?.toIntOrNull() ?: return@get call.respond(
+                        HttpStatusCode.BadRequest
+                    )
+                    val role =
+                        call.request.queryParameters["role"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                    if (role == Roles.Superuser.name) {
+                        call.respond(HttpStatusCode.Forbidden, "Only via direct database access. This incident will be reported.")
                     }
-                    val review = Repository.Reviews.getReview(id!!).apply { this!!.user!!.clearPersonalData() }
-                    if (review == null) {
-                        call.respond(HttpStatusCode.NotFound)
+                    if (Repository.Users.setRole(id, role = Roles.valueOf(role))) {
+                        call.respond(HttpStatusCode.OK)
+                        logger.debug("Set role for user $id to $role")
                     } else {
-                        call.respond(review)
-                    }
-                }
-                get("/getByTeacher") {
-                    verify(Teachers)
-                    val params = Paging.from(call)
-                    val teacherId = call.request.queryParameters["teacherId"]?.toIntOrNull()
-                    if (teacherId == null) {
+                        logger.debug("Failed to set role for user $id to $role")
                         call.respond(HttpStatusCode.BadRequest)
                     }
-                    val reviews =
-                        Repository.Reviews.getReviewsByTeacher(teacherId!!, params)
-                            .onEach { it.user!!.clearPersonalData() }
-                    call.respond(reviews)
                 }
-                get("/getByUser") {
-                    verify(Teachers)
-                    val params = Paging.from(call)
-                    val userId = call.request.queryParameters["userId"]?.toIntOrNull()
-                    if (userId != null) {
-                        val reviews =
-                            Repository.Reviews.getReviewsByUser(userId, params).onEach { it.user!!.clearPersonalData() }
-                        call.respond(reviews)
+            }
+            route("/reviews") {
+                get("/delete") {
+                    verify(Teachers, TeachersReviewing)
+                    val id = call.request.queryParameters["id"]?.toIntOrNull() ?: return@get call.respond(
+                        HttpStatusCode.BadRequest
+                    )
+                    if (Repository.Reviews.removeReview(id)) {
+                        call.respond(HttpStatusCode.OK)
                     } else {
-                        call.respond(HttpStatusCode.BadRequest)
+                        call.respond(HttpStatusCode.NotModified)
+                    }
+                }
+            }
+            route("/server") {
+                get("/shutdown") {
+                    verify(SS)
+                    repeat(3) {
+                        logger.error("WARNING: Used danger method SHUTDOWN by user: ${call.getUserDataFromToken().id}")
+                    }
+                    call.respond(HttpStatusCode.OK)
+                    delay(1000)
+                    exitProcess(777)
+                }
+                get("/dropDatabase") {
+                    verify(SS)
+                    repeat(3) {
+                        logger.error("WARNING: Used danger method DROPDATABASE by user: ${call.getUserDataFromToken().id}")
+                    }
+                    Repository.Global.dropDatabase()
+                    call.respond(HttpStatusCode.OK)
+                }
+                get("/log") {
+                    call.respondText {
+                        File("./log").readText()
                     }
                 }
             }

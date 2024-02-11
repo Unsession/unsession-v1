@@ -13,9 +13,6 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
-// генерал рандом ахахахаха
-//val generalRandom = Random(System.getenv("coderndseed").toInt())
-
 class UnsessionSchema(private val database: Database) {
     object Users : Table("Users") {
 

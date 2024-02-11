@@ -22,7 +22,6 @@ fun Application.module() {
     configureMonitoring()
     configureSerialization()
     configureDatabases()
-    configureAdministration()
     configureSecurity()
     configureRouting()
 }

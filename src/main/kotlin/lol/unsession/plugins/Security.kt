@@ -47,6 +47,15 @@ fun Application.configureSecurity() {
                 call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired; scheme=$defaultScheme realm=\"$realm\"")
             }
         }
+        basic("admin-auth") {
+            validate { credentials ->
+                if (credentials.name == "admin" && credentials.password == System.getenv("adminPassword")) {
+                    UserIdPrincipal(credentials.name)
+                } else {
+                    null
+                }
+            }
+        }
     }
 }
 
@@ -54,8 +63,8 @@ fun createToken(user: User): String {
     return JWT.create()
         .withIssuer("unsession")
         .withClaim("userId", user.id)
-        .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withClaim("username", user.name)
+        .withArrayClaim("permissions", user.permissions.map { it.name }.toTypedArray())
         .withExpiresAt(Date(Clock.System.now().toEpochMilliseconds() + System.getenv("tokenLifetime").toInt()))
         .sign(Algorithm.HMAC512(System.getenv("secret")))
 }
@@ -77,7 +86,8 @@ fun ApplicationCall.getPermissions(): HashSet<Access>? {
 
 suspend fun RoutingContext.verify(vararg access: Access) {
     val call = this.call
-    val permissions = call.getPermissions()
+    val userId = call.getUserDataFromToken().id
+    val permissions = Repository.Users.getUser(userId)?.permissions
     if (permissions == null) {
         call.respond(HttpStatusCode.Forbidden)
         return

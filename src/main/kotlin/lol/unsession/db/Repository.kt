@@ -13,6 +13,7 @@ import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
 import lol.unsession.db.models.client.Review
+import lol.unsession.plugins.logger
 import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
@@ -44,6 +45,8 @@ interface ReviewsRepoInterface {
             calculateRatingForTeacher(this.id)
         )
     }
+
+    suspend fun removeReview(id: Int): Boolean
 }
 
 interface UsersDaoInterface {
@@ -67,13 +70,17 @@ interface UsersDaoInterface {
     ): Boolean
 
     suspend fun registerUser(userLoginData: User.UserLoginData, ip: String): User?
+    suspend fun getUsers(): List<User>
+    suspend fun removeUser(id: Int): Boolean
 }
 
 sealed class Repository {
 
     object Teachers : TeachersRepoInterface {
         override suspend fun getTeacher(id: Int): TeacherDto? {
-            return dbQuery { Teacher.select { Teacher.id eq id }.map { Teacher.fromRow(it) }.firstOrNull()?.withRating() }
+            return dbQuery {
+                Teacher.select { Teacher.id eq id }.map { Teacher.fromRow(it) }.firstOrNull()?.withRating()
+            }
         }
 
         override suspend fun getTeachers(paging: Paging): List<TeacherDto> {
@@ -119,7 +126,10 @@ sealed class Repository {
         }
 
         override suspend fun getReviewsByTeacher(teacherId: Int, paging: Paging): List<Review> {
-            return selectData(TeacherReview.select(TeacherReview.teacherId eq teacherId).orderBy(TeacherReview.created, SortOrder.DESC), paging.page, paging.size).map {
+            return selectData(
+                TeacherReview.select(TeacherReview.teacherId eq teacherId)
+                    .orderBy(TeacherReview.created, SortOrder.DESC), paging.page, paging.size
+            ).map {
                 TeacherReview.fromRow(it).toReview()
             }
         }
@@ -136,11 +146,19 @@ sealed class Repository {
 
         override suspend fun calculateRatingForTeacher(teacherId: Int): Double {
             val result =
-                dbQuery { TeacherReview.select { TeacherReview.teacherId eq teacherId }.map { TeacherReview.fromRow(it) } }
+                dbQuery {
+                    TeacherReview.select { TeacherReview.teacherId eq teacherId }.map { TeacherReview.fromRow(it) }
+                }
             if (result.isEmpty()) {
                 return -1.0 // Нет ревью, нет рейтинга
             }
             return result.map { it.globalRating }.average()
+        }
+
+        override suspend fun removeReview(id: Int): Boolean {
+            return dbQuery {
+                TeacherReview.deleteWhere { TeacherReview.id eq id } > 0
+            }
         }
     }
 
@@ -264,6 +282,21 @@ sealed class Repository {
             throw Exception("Failed to register user")
         }
 
+        override suspend fun getUsers(): List<User> {
+            return dbQuery {
+                UnsessionSchema.Users.selectAll().map {
+                    val permissions = UsersPermissions.getPermissions(it[id])
+                    UnsessionSchema.Users.fromRow(it, permissions).toUser()
+                }
+            }
+        }
+
+        override suspend fun removeUser(id: Int): Boolean {
+            return dbQuery {
+                UnsessionSchema.Users.deleteWhere { UnsessionSchema.Users.id eq id } > 0
+            }
+        }
+
         override suspend fun setRole(id: Int, role: Roles): Boolean {
             return try {
                 Companion.dbQuery {
@@ -272,22 +305,27 @@ sealed class Repository {
                     }.map {
                         it[Permissions.id]
                     }
+                    logger.info("New role permissions: $newRolePermissions")
                     UsersPermissions.deleteWhere {
                         userId eq id
                     }
+                    logger.info("Deleted old permissions")
                     UnsessionSchema.Users.update({ UnsessionSchema.Users.id eq id }) {
                         it[roleName] = role.roleData.name
                     }
+                    logger.info("Updated role")
                     newRolePermissions.forEach { permissionId ->
                         UsersPermissions.insert {
                             it[userId] = id
                             it[this.permissionId] = permissionId
                         }
                     }
+                    logger.info("Inserted new permissions")
                     true
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                logger.error("Failed to set role for user $id")
                 false
             }
         }
@@ -368,6 +406,14 @@ sealed class Repository {
                         onExecuted("Test data generated successfully")
                     }
                 )
+            }
+        }
+    }
+
+    object Global {
+        fun dropDatabase() {
+            transaction {
+                SchemaUtils.dropDatabase("unsession")
             }
         }
     }
