@@ -114,6 +114,12 @@ fun Application.configureRouting() {
                         logger.error(e)
                     }
                 }
+                post("/fcm") {
+                    val user = call.getUserDataFromToken()
+                    val fcmToken = call.receive<String>()
+                    Repository.Notifications.updateFcm(user.id, fcmToken)
+                    call.respond(HttpStatusCode.OK)
+                }
             }
             authenticate("user-auth") {
                 route("/teachers") {

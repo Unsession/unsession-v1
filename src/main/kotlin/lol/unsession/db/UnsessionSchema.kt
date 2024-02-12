@@ -234,6 +234,13 @@ class UnsessionSchema(private val database: Database) {
         override val primaryKey = PrimaryKey(id)
     }
 
+    object FCM : Table() {
+        val userId = integer("user").references(Users.id)
+        val token = varchar("token", 255)
+
+        override val primaryKey = PrimaryKey(userId)
+    }
+
     init {
         initial()
     }

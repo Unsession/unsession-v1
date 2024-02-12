@@ -417,4 +417,19 @@ sealed class Repository {
             }
         }
     }
+
+    object Notifications {
+        fun updateFcm(userId: Int, token: String) {
+            if (FCM.select(FCM.userId eq userId).empty()) {
+                FCM.insert {
+                    it[FCM.userId] = userId
+                    it[FCM.token] = token
+                }
+            } else {
+                FCM.update({ FCM.userId eq userId }) {
+                    it[FCM.token] = token
+                }
+            }
+        }
+    }
 }
