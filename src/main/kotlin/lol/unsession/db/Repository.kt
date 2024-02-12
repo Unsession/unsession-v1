@@ -14,9 +14,11 @@ import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
 import lol.unsession.db.models.client.Review
 import lol.unsession.plugins.logger
+import lol.unsession.security.code.CodeUtils
 import lol.unsession.security.permissions.Roles
 import lol.unsession.security.user.User
 import lol.unsession.security.utils.Crypto
+import lol.unsession.services.ReferralService
 import lol.unsession.test.TestSDK
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -72,6 +74,16 @@ interface UsersDaoInterface {
     suspend fun registerUser(userLoginData: User.UserLoginData, ip: String): User?
     suspend fun getUsers(): List<User>
     suspend fun removeUser(id: Int): Boolean
+    suspend fun getUserCodeCreator(code: String): User?
+    suspend fun addReferrer(userId: Int, referrerId: Int): Boolean
+}
+
+interface CodesRepoInterface {
+    suspend fun create(userId: Int, maxActivations: Int = Int.MAX_VALUE): String
+    suspend fun create(userId: Int, maxActivations: Int = Int.MAX_VALUE, validUntil: Int): String
+    suspend fun activateCode(code: String, userId: Int): Boolean
+    suspend fun getCodeByUser(userId: Int): String?
+    suspend fun canActivateCode(code: String): Boolean
 }
 
 sealed class Repository {
@@ -245,6 +257,10 @@ sealed class Repository {
             userExists: suspend () -> Unit,
             onFailure: suspend () -> Unit
         ): Boolean {
+            if (!Repository.Codes.canActivateCode(userLoginData.code!!)) {
+                onFailure()
+                return false
+            }
             val newUser = registerUser(userLoginData, ip)
             onSuccess(newUser)
             return true
@@ -269,6 +285,8 @@ sealed class Repository {
                 lastIp = ip,
             )
             UnsessionSchema.Users.create(newUserDto)
+            if (ReferralService.referralRegister(newUserDto.toUser(), userLoginData.code!!))
+                throw IllegalArgumentException("Failed to register user, cannot activate code wtf?")
             try {
                 val newUser = getUser(userLoginData.email, withPermissions = false)
                 val roleSet = setRole(newUser!!.id, Roles.User)
@@ -294,6 +312,22 @@ sealed class Repository {
         override suspend fun removeUser(id: Int): Boolean {
             return dbQuery {
                 UnsessionSchema.Users.deleteWhere { UnsessionSchema.Users.id eq id } > 0
+            }
+        }
+
+        override suspend fun getUserCodeCreator(code: String): User? {
+            return dbQuery {
+                val userId = UnsessionSchema.Code.select(UnsessionSchema.Code.code eq code).firstOrNull()?.get(UnsessionSchema.Code.creator)
+                    ?: return@dbQuery null
+                return@dbQuery getUser(userId)
+            }
+        }
+
+        override suspend fun addReferrer(userId: Int, referrerId: Int): Boolean {
+            return dbQuery {
+                UnsessionSchema.Users.update({ UnsessionSchema.Users.id eq userId }) {
+                    it[referer] = referrerId
+                } > 0
             }
         }
 
@@ -347,6 +381,7 @@ sealed class Repository {
                         it[UnsessionSchema.Users.email],
                         it[UnsessionSchema.Users.password],
                         it[UnsessionSchema.Users.salt],
+                        null
                     )
                 }
             }
@@ -360,6 +395,7 @@ sealed class Repository {
                         it[UnsessionSchema.Users.email],
                         it[UnsessionSchema.Users.password],
                         it[UnsessionSchema.Users.salt],
+                        null
                     )
                 }
             }
@@ -382,6 +418,8 @@ sealed class Repository {
                         TestSDK.username,
                         TestSDK.email,
                         TestSDK.password,
+                        null,
+                        null
                     ), "1.1.1.1",
                     onSuccess = { user ->
                         repeat(5) {
@@ -430,6 +468,73 @@ sealed class Repository {
                     it[FCM.token] = token
                 }
             }
+        }
+    }
+
+    object Codes : CodesRepoInterface {
+        private const val DEFAULT_VALID = 2051218800 // 12.12.2034 23:00:00
+        override suspend fun create(userId: Int, maxActivations: Int): String {
+            val code = CodeUtils.generateCode()
+            val now = Clock.System.now().epochSeconds
+            dbQuery {
+                UnsessionSchema.Code.insert {
+                    it[Code.creator] = userId
+                    it[Code.code] = code
+                    it[Code.maxActivations] = maxActivations
+                    it[Code.validUntil] = DEFAULT_VALID
+                }
+            }
+            return code
+        }
+
+        override suspend fun create(userId: Int, maxActivations: Int, validUntil: Int): String {
+            val code = CodeUtils.generateCode()
+            val now = Clock.System.now().epochSeconds
+            dbQuery {
+                UnsessionSchema.Code.insert {
+                    it[Code.creator] = userId
+                    it[Code.code] = code
+                    it[Code.maxActivations] = maxActivations
+                    it[Code.validUntil] = validUntil
+                }
+            }
+            return code
+        }
+
+        override suspend fun activateCode(code: String, userId: Int): Boolean {
+            if (!canActivateCode(code)) return false
+            val now = Clock.System.now().epochSeconds
+            val result = dbQuery {
+                UnsessionSchema.Code.select { UnsessionSchema.Code.code eq code }.firstOrNull()
+            } ?: return false
+            dbQuery {
+                UnsessionSchema.Code.update({ UnsessionSchema.Code.code eq code }) {
+                    it[UnsessionSchema.Code.activations] = result[UnsessionSchema.Code.activations] + 1
+                }
+            }
+            return true
+        }
+
+        override suspend fun getCodeByUser(userId: Int): String? {
+            val now = Clock.System.now().epochSeconds
+            val result = dbQuery {
+                UnsessionSchema.Code.select { UnsessionSchema.Code.creator eq userId }.firstOrNull()
+            } ?: return null
+            return result[UnsessionSchema.Code.code]
+        }
+
+        override suspend fun canActivateCode(code: String): Boolean {
+            val now = Clock.System.now().epochSeconds
+            val result = dbQuery {
+                UnsessionSchema.Code.select { UnsessionSchema.Code.code eq code }.firstOrNull()
+            } ?: return false
+            if (result[UnsessionSchema.Code.validUntil] < now) {
+                return false
+            }
+            if (result[UnsessionSchema.Code.activations] >= result[UnsessionSchema.Code.maxActivations]) {
+                return false
+            }
+            return true
         }
     }
 }

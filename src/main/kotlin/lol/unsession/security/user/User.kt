@@ -18,6 +18,8 @@ class User(
     val created: Int,
     var lastLogin: Int?,
     var lastIp: String?,
+    val refererCode: String,
+    val refererId: Int?
 ) {
 
     @Serializable
@@ -25,13 +27,14 @@ class User(
         val username: String?,
         val email: String,
         val password: String,
-        val salt: String? = null
-
-    ) {
+        val salt: String? = null,
+        val code: String?,
+        ) {
         fun validate(): Boolean {
             return (email.contains("^[a-zA-Z0-9_.+-]+@(niuitmo.ru|itmo.ru)$".toRegex()) &&
                     password.length >= 8 &&
-                    username.toString().length >= 4)
+                    username.toString().length >= 4 &&
+                    code?.length == 6)
         }
     }
 
@@ -76,7 +79,7 @@ class User(
                 this[UnsessionSchema.Users.bannedUntil],
                 this[UnsessionSchema.Users.created],
                 this[UnsessionSchema.Users.lastLogin],
-                this[UnsessionSchema.Users.lastIp],
+                this[UnsessionSchema.Users.lastIp]
             )
         }
     }

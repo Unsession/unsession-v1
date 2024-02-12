@@ -90,11 +90,9 @@ suspend fun RoutingContext.verify(vararg access: Access) {
     val permissions = Repository.Users.getUser(userId)?.permissions
     if (permissions == null) {
         call.respond(HttpStatusCode.Forbidden)
-        return
     }
-    if (!permissions.containsAll(access.toList())) {
+    if (!permissions!!.containsAll(access.toList())) {
         call.respond(HttpStatusCode.Forbidden)
-        return
     }
 }
 

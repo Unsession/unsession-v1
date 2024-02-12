@@ -30,7 +30,7 @@ class UnsessionSchema(private val database: Database) {
         val bannedReason = varchar("bannedReason", 255).nullable()
         val bannedUntil = integer("bannedUntil").nullable()
 
-        val created = integer("created")
+        val created = integer("created").default(Clock.System.now().epochSeconds.toInt())
 
         val lastLogin = integer("last_login")
         val lastIp = varchar("last_ip", 15)
@@ -100,6 +100,9 @@ class UnsessionSchema(private val database: Database) {
         val id = integer("id").autoIncrement().uniqueIndex()
         val userId = integer("user_id").references(Users.id)
         val permissionId = integer("permission_id").references(Permissions.id)
+        val active = bool("active").default(true)
+        val assigned = integer("assigned").default(Clock.System.now().epochSeconds.toInt())
+
         fun getPermissions(userId: Int): List<String> {
             return transaction {
                 Users
@@ -116,13 +119,13 @@ class UnsessionSchema(private val database: Database) {
         override val primaryKey = PrimaryKey(id)
     }
 
-    object Codes : Table() {
+    object Code : Table() {
         val id = integer("id").autoIncrement().uniqueIndex()
         val creator = integer("creator_id").references(Users.id)
 
         val code = varchar("code", 4) //.default(generalRandom.nextBits(4).toString())
         val activations = integer("activations").default(0)
-        val maxActivations = integer("maxActivations").default(1)
+        val maxActivations = integer("maxActivations")
         val validUntil = integer("validUntil")
 
         override val primaryKey = PrimaryKey(id)
@@ -247,7 +250,7 @@ class UnsessionSchema(private val database: Database) {
 
     fun initial() {
         transaction(database) {
-            SchemaUtils.create(Users, Codes, Teacher, TeacherReview, Permissions)
+            SchemaUtils.create(Users, Code, Teacher, TeacherReview, Permissions)
             Permissions.insertPermissions()
             SchemaUtils.create(UsersPermissions)
             exec(
@@ -279,7 +282,7 @@ class UnsessionSchema(private val database: Database) {
                 CREATE SCHEMA public;
             """.trimIndent()
             )
-            SchemaUtils.create(Users, Codes, Teacher, TeacherReview, Permissions)
+            SchemaUtils.create(Users, Code, Teacher, TeacherReview, Permissions)
             Permissions.insertPermissions()
             SchemaUtils.create(UsersPermissions)
             exec(

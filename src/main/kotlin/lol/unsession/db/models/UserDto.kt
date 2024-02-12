@@ -1,11 +1,12 @@
 package lol.unsession.db.models
 
 import kotlinx.serialization.Serializable
+import lol.unsession.db.Repository
 import lol.unsession.security.permissions.Access
 import lol.unsession.security.user.User
 
 @Serializable
-data class UserDto (
+data class UserDto(
     val id: Int,
     val name: String,
     val email: String,
@@ -21,7 +22,9 @@ data class UserDto (
 ) {
 
     companion object {
-        fun UserDto.toUser(): User {
+        suspend fun UserDto.toUser(): User {
+            val userCode = Repository.Codes.getCodeByUser(this.id) ?: ""
+            val referrer = Repository.Users.getUser((Repository.Users.getUser(this.id)?.refererId) ?: -1)
             return User(
                 this.id,
                 this.name,
@@ -30,6 +33,7 @@ data class UserDto (
                     this.email,
                     this.password,
                     this.salt,
+                    referrer?.refererCode,
                 ),
                 this.permissions.map { Access.valueOf(it) }.toHashSet(),
                 this.roleName,
@@ -43,7 +47,9 @@ data class UserDto (
                 },
                 this.created,
                 this.lastLogin,
-                this.lastIp
+                this.lastIp,
+                userCode,
+                referrer?.id,
             )
         }
     }

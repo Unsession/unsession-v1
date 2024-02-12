@@ -1,13 +1,10 @@
 package lol.unsession.generators
 
-import io.ktor.server.engine.*
-import kotlinx.datetime.Clock
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import lol.unsession.db.models.UserDto
 import lol.unsession.db.models.UserDto.Companion.toUser
-import java.nio.file.Paths
-import java.util.*
 
 val user = UserDto(
     id = 1,
@@ -33,9 +30,12 @@ fun main() {
                 val jsonString = Json.encodeToString(user)
                 println(jsonString)
             }
+
             "User" -> {
-                val jsonString = Json.encodeToString(user.toUser())
-                println(jsonString)
+                runBlocking {
+                    val jsonString = Json.encodeToString(user.toUser())
+                    println(jsonString)
+                }
             }
         }
     }
