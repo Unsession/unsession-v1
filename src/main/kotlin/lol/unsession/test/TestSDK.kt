@@ -1,5 +1,7 @@
 package lol.unsession.test
 
+import lol.unsession.security.code.CodeUtils
+
 object TestData {
     val names = listOf(
         "Мария",
@@ -213,11 +215,11 @@ object TestSDK {
     val patronymic: String
         get() = TestData.patronymic.random()
     val username: String
-        get() = TestData.username.random()
+        get() = CodeUtils.generateCode() + " " + TestData.username.random()
     /**
      * username@niuitmo.ru*/
     val email: String
-        get() = TestData.username.random() + "@niuitmo.ru"
+        get() = CodeUtils.generateCode() + "@niuitmo.ru"
     val department: String
         get() = TestData.departments.random()
     val password: String

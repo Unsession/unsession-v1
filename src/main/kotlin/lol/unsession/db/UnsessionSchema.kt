@@ -6,8 +6,10 @@ import lol.unsession.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.db.models.ReviewDto
 import lol.unsession.db.models.TeacherDto
 import lol.unsession.db.models.UserDto
+import lol.unsession.security.code.CodeUtils
 import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -17,10 +19,8 @@ class UnsessionSchema(private val database: Database) {
     object Users : Table("Users") {
 
         val id = integer("id").autoIncrement("users_id_seq").uniqueIndex()
-        val username = varchar("username", 64)
-        val email = varchar("email", 64).check {
-            it like "%@niuitmo.ru" or (it like "%@itmo.ru")
-        }
+        val username = varchar("username", 64).uniqueIndex()
+        val email = varchar("email", 64).uniqueIndex()
 
         val password = varchar("hash", 128)
         val salt = varchar("salt", 16 * 8)
@@ -39,23 +39,22 @@ class UnsessionSchema(private val database: Database) {
 
         override val primaryKey = PrimaryKey(id)
 
-        suspend fun create(user: UserDto): UserDto? {
-            if (dbQuery {
-                    Users.insert {
-                        it[username] = user.name
-                        it[email] = user.email
-                        it[password] = user.password
-                        it[salt] = user.salt
-                        it[roleName] = user.roleName
-                        it[bannedReason] = user.bannedReason
-                        it[bannedUntil] = user.bannedUntil
-                        it[created] = user.created
-                        it[lastLogin] = user.lastLogin
-                        it[lastIp] = user.lastIp
-                    }
-                }.insertedCount == 1)
-                return user
-            return null
+        suspend fun create(user: UserDto): UserDto {
+            val id = dbQuery {
+                Users.insert {
+                    it[username] = user.name
+                    it[email] = user.email
+                    it[password] = user.password
+                    it[salt] = user.salt
+                    it[roleName] = user.roleName
+                    it[bannedReason] = user.bannedReason
+                    it[bannedUntil] = user.bannedUntil
+                    it[created] = user.created
+                    it[lastLogin] = user.lastLogin
+                    it[lastIp] = user.lastIp
+                }
+            }[Users.id]
+            return user.copy(id = id)
         }
 
         fun fromRow(row: ResultRow, permissions: List<String>): UserDto {
@@ -72,7 +71,8 @@ class UnsessionSchema(private val database: Database) {
                 row[created],
                 row[lastLogin],
                 row[lastIp],
-            )
+
+                )
         }
     }
 
@@ -121,9 +121,9 @@ class UnsessionSchema(private val database: Database) {
 
     object Code : Table() {
         val id = integer("id").autoIncrement().uniqueIndex()
-        val creator = integer("creator_id").references(Users.id)
+        val creator = integer("creator_id").references(Users.id).nullable()
 
-        val code = varchar("code", 4) //.default(generalRandom.nextBits(4).toString())
+        val code = varchar("code", 6) //.default(generalRandom.nextBits(4).toString())
         val activations = integer("activations").default(0)
         val maxActivations = integer("maxActivations")
         val validUntil = integer("validUntil")
@@ -271,6 +271,28 @@ class UnsessionSchema(private val database: Database) {
                 EXECUTE FUNCTION assign_new_id();
             """.trimIndent()
             )
+            if (Users.select(Users.username eq "Maxim").count() > 0) return@transaction
+            if (Code.select(Code.code eq "AAAAAA").count() > 0) return@transaction
+            Users.insertIgnore {
+                it[username] = "System"
+                it[email] = "system"
+                it[password] = "system"
+                it[salt] = "system"
+                it[roleName] = "admin"
+                it[bannedReason] = null
+                it[bannedUntil] = null
+                it[created] = 0
+                it[lastLogin] = 0
+                it[lastIp] = "0.0.0.0"
+                it[id] = 0
+            }
+            Code.insertIgnore {
+                it[creator] = 0
+                it[code] = "NORTON"
+                it[activations] = 0
+                it[maxActivations] = 50
+                it[validUntil] = 2051218800
+            }
         }
     }
 

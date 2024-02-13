@@ -73,7 +73,7 @@ fun Application.configureRouting() {
                 post("/login") {
                     val loginData = call.receive<User.UserLoginData>()
 
-                    val user = Repository.Users.getUser(loginData.email)
+                    val user = Repository.Users.getUser(loginData.email)?.copy(userLoginData = loginData)
                     if (user == null) call.respond(HttpStatusCode.Unauthorized)
                     if (user!!.isBanned) call.respond(HttpStatusCode.Forbidden, user.banData!!)
 

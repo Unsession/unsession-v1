@@ -23,8 +23,8 @@ data class UserDto(
 
     companion object {
         suspend fun UserDto.toUser(): User {
-            val userCode = Repository.Codes.getCodeByUser(this.id) ?: ""
-            val referrer = Repository.Users.getUser((Repository.Users.getUser(this.id)?.refererId) ?: -1)
+            val userCode = Repository.Codes.getCodeByUser(this.id) ?: "" // наш реферальный код
+            val referrer = Repository.Users.getUserCodeCreator(userCode) // TODO: пользователь, который нас пригласил
             return User(
                 this.id,
                 this.name,

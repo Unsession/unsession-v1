@@ -15,6 +15,9 @@ val gson = Gson()
 val HttpStatusCode.Companion.Teapot: HttpStatusCode
     get() = HttpStatusCode(418, "I'm a teapot")
 
+//val HttpStatusCode.Companion.NoPermissions: HttpStatusCode
+//    get() = HttpStatusCode(430, "No permissions")
+
 object Utils {
     val now: Int
         get() = (Clock.System.now().epochSeconds).toInt()

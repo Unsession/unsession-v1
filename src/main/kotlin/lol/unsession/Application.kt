@@ -10,8 +10,8 @@ import lol.unsession.plugins.*
 fun main() {
     embeddedServer(
         Netty,
-        port = 5050,
-        host = "10.128.0.8",
+        port = System.getenv("port").toInt(),
+        host = System.getenv("ip"),
         module = Application::module
     )
         .start(wait = true)

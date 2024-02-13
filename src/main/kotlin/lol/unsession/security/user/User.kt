@@ -8,7 +8,7 @@ import lol.unsession.security.permissions.Access
 import org.jetbrains.exposed.sql.ResultRow
 
 @Serializable
-class User(
+data class User(
     val id: Int,
     val name: String,
     var userLoginData: UserLoginData?,
