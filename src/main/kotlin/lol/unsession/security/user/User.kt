@@ -26,7 +26,6 @@ class User(
         val email: String,
         val password: String,
         val salt: String? = null
-
     ) {
         fun validate(): Boolean {
             return (email.contains("^[a-zA-Z0-9_.+-]+@(niuitmo.ru|itmo.ru)$".toRegex()) &&

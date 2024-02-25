@@ -1,18 +1,14 @@
 package lol.unsession.plugins
 
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
 import lol.unsession.db.UnsessionSchema
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Database
 
 fun configureDatabases() {
     val database = Database.connect(
         url = "jdbc:postgresql://localhost:5432/unsession",
         user = "vlad",
         driver = "org.postgresql.Driver",
-        password = "08790Slv!!"
+        password = System.getenv("DB_PASSWORD")
     )
     val schema = UnsessionSchema(database)
 }
@@ -22,7 +18,7 @@ fun configureDatabasesLocalhost() {
         url = "jdbc:postgresql://localhost:5432/unsession",
         user = "postgres",
         driver = "org.postgresql.Driver",
-        password = "08790SLV"
+        password = System.getenv("DB_PASSWORD")
     )
     val schema = UnsessionSchema(database)
 }

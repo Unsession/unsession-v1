@@ -23,7 +23,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
 interface TeachersRepoInterface {
-    suspend fun getTeacher(id: Int): TeacherDto? // single object
+    suspend fun getTeacher(id: Int): TeacherDto?
     suspend fun getTeachers(paging: Paging): List<TeacherDto>
     suspend fun addTeacher(teacher: TeacherDto): TeacherDto?
     suspend fun searchTeachers(prompt: String, paging: Paging): List<TeacherDto>
@@ -70,7 +70,7 @@ interface UsersDaoInterface {
     ): Boolean
 
     suspend fun registerUser(userLoginData: User.UserLoginData, ip: String): User?
-    suspend fun getUsers(): List<User>
+    suspend fun getUsers(paging: Paging): List<User>
     suspend fun removeUser(id: Int): Boolean
 }
 
@@ -105,7 +105,7 @@ sealed class Repository {
     object Reviews : ReviewsRepoInterface {
         /**
          * Если существует ревью с таким ид, то практически невозможно выпасть в null,
-         * для этого схему нужно будет ломать, но вдруг я что-то не предусмотрел*/
+         * для этого схему нужно будет ломать, но вдруг я что-то не предусмотрел */
         override suspend fun getReview(id: Int): Review? {
             return dbQuery {
                 val review =
@@ -282,9 +282,11 @@ sealed class Repository {
             throw Exception("Failed to register user")
         }
 
-        override suspend fun getUsers(): List<User> {
+        override suspend fun getUsers(paging: Paging): List<User> {
             return dbQuery {
-                UnsessionSchema.Users.selectAll().map {
+                UnsessionSchema.Users.selectAll()
+                    .limit(paging.size, (paging.page * paging.size).toLong())
+                    .map {
                     val permissions = UsersPermissions.getPermissions(it[id])
                     UnsessionSchema.Users.fromRow(it, permissions).toUser()
                 }

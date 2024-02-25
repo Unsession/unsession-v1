@@ -1,8 +1,7 @@
-package lol.unsession.db.models
+package lol.unsession.parsers
 
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Document
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.statements.Statement
 
 interface DbObject {

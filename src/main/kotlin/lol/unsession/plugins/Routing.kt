@@ -226,7 +226,8 @@ fun Application.configureRouting() {
             route("/users") {
                 get("/get") {
                     verify(Users)
-                    call.respond(Repository.Users.getUsers())
+                    val paging = Paging.from(call)
+                    call.respond(Repository.Users.getUsers(paging))
                 }
                 get("/ban") {
                     verify(Users, UsersBlocking)
@@ -308,8 +309,7 @@ fun Application.configureRouting() {
                         logger.error("WARNING: Used danger method SHUTDOWN by user: ${call.getUserDataFromToken().id}")
                     }
                     call.respond(HttpStatusCode.OK)
-                    delay(1000)
-                    exitProcess(777)
+                    exitProcess(1488)
                 }
                 get("/dropDatabase") {
                     verify(SS)
