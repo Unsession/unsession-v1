@@ -1,141 +1,105 @@
 package lol.unsession.ai
 
 import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.gson.*
+import lol.unsession.AiResponse
+import lol.unsession.Results
+import lol.unsession.ai.request.AiRequest
+import lol.unsession.db.models.ReviewDto
+import lol.unsession.utils.getLogger
 
-val aiClient = HttpClient {
+val aiClient = HttpClient(OkHttp) {
     defaultRequest {
         headers {
-            append("Content-Type", ContentType.Application.Json.contentType)
-            append("Authorization", ("Api-Key ${System.getenv("ai-apiKey")}"))
-            append("x-folder-id", System.getenv("folder-id"))
+            append("Content-Type", ContentType.Application.Json)
+            append("Authorization", ("Bearer ${System.getenv("ai_apiKey")}"))
+        }
+    }
+    install(ContentNegotiation) {
+        gson {
+            setPrettyPrinting()
         }
     }
 }
 
-//sealed class AiModule {
-//    val liteLLM = "gpt://${System.getenv("folder-id")}/yandexgpt-lite"
-//    val heavyLLM =
-//        "gpt://${System.getenv("folder-id")}/yandexgpt" // это дорогая модель, поэтому используем ее только для сложных запросов
-//
-//    suspend fun HttpResponse.toResult(): Pair<AiResult?, Result<String>> {
-//        val response = this.body<AiResponse>().aiResult
-//        return if (status == HttpStatusCode.OK && response != null) {
-//            response to Result.success()
-//        } else {
-//            response to Result.error((response?.alternatives?.get(0)?.message ?: "Unknown error").toString())
-//        }
-//    }
-//
-//    data object Censor : AiModule() {
-//
-//        private suspend fun censoringRequest(
-//            request: String
-//        ): Result {
-//            val call = aiClient.post {
-//                setBody(
-//                    AiRequest(
-//                        modelUri = liteLLM,
-//                        completionOptions = CompletionOptions(
-//                            stream = false,
-//                            temperature = 0.35,
-//                            maxTokens = 450,
-//                        ),
-//                        messages = listOf(
-//                            Messages(
-//                                role = "System",
-//                                text = getResourceUri("prompts/censor_review").readText()
-//                            ),
-//                            Messages(
-//                                role = "user",
-//                                text = request
-//                            )
-//                        )
-//                    )
-//                )
-//            }
-//            val response = call.toResult()
-//            return if (response.second.success) {
-//                Result.success()
-//            } else {
-//                Result.error(response.first?.alternatives?.get(0)?.message.toString())
-//            }
-//        }
-//
-//        suspend fun Review.allowed(): Result {
-//            val review = this
-//            if (review.comment == null || review.comment.isNotEmpty()) return Result(
-//                true,
-//                "Отзыв не содержит комментария"
-//            )
-//            val result = censoringRequest(
-//                request = review.comment.toString()
-//            )
-//            return if (result.success) {
-//                Result.success()
-//            } else {
-//                Result.error(result.message.toString())
-//            }
-//        }
-//    }
-//
-//    data object Reviews : AiModule() {
-//        suspend fun avgComment(
-//            teacherId: Int
-//        ): Result {
-//            val reviews = Repository.Reviews.getReviewsByTeacher(teacherId, Paging(0, 20))
-//            val prompt = constructPrompt(reviews)
-//            val call = aiClient.post {
-//                setBody(
-//                    AiRequest(
-//                        modelUri = heavyLLM,
-//                        completionOptions = CompletionOptions(
-//                            stream = false,
-//                            temperature = 0.75,
-//                            maxTokens = 2000,
-//                        ),
-//                        messages = listOf(
-//                            Messages(
-//                                role = "System",
-//                                text = getResourceUri("prompts/avg_comment").readText()
-//                            ),
-//                            Messages(
-//                                role = "user",
-//                                text = prompt
-//                            )
-//                        )
-//                    )
-//                )
-//            }
-//            val response = call.body<AiResponse>().aiResult
-//            return if (call.status == HttpStatusCode.OK && response != null) {
-//                Result.success()
-//            } else {
-//                Result.error((response?.alternatives?.get(0)?.message ?: "Unknown error").toString())
-//            }
-//        }
-//
-//        private fun constructPrompt(reviews: List<Review>): String { // TODO : use formatted string
-//            val prompt = StringBuilder()
-//            prompt.append(getResourceUri("prompts/avg_comment").readText())
-//            prompt.append("\n\n")
-//            reviews.forEach {
-//                prompt.append("Общий рейтинг: ${it.globalRating}\n")
-//                it.labsRating?.let { labsRating -> prompt.append("Рейтинг лаб: $labsRating\n") }
-//                it.hwRating?.let { hwRating -> prompt.append("Рейтинг дз: $hwRating\n") }
-//                it.examRating?.let { examRating -> prompt.append("Рейтинг экзаменов: $examRating\n") }
-//                it.kindness?.let { kindness -> prompt.append("Доброта: $kindness\n") }
-//                it.responsibility?.let { responsibility -> prompt.append("Ответственность: $responsibility\n") }
-//                it.individuality?.let { individuality -> prompt.append("Индивидуальность: $individuality\n") }
-//                it.humour?.let { humour -> prompt.append("Юмор: $humour\n") }
-//                prompt.append("\n")
-//                prompt.append("Комментарий к оценкам:\n")
-//                prompt.append(it.comment)
-//                prompt.append("\n")
-//            }
-//            return prompt.toString()
-//        }
-//    }
-//}
+sealed class AiModule {
+    val liteLLM = "gpt://${System.getenv("folder-id")}/yandexgpt-lite"
+    val heavyLLM =
+        "gpt://${System.getenv("folder-id")}/yandexgpt" // это дорогая модель, поэтому используем ее только для сложных запросов
+    val chatModeration7 = "https://api.openai.com/v1/moderations"
+
+    val logger = getLogger("Ai")
+
+    suspend fun HttpResponse.toResult(): Result<Results> {
+        return when (status) {
+            HttpStatusCode.OK -> {
+                val response = this.body<AiResponse>().results.first()
+                Result.success(response)
+            }
+            else -> {
+                val response = this.bodyAsText()
+                Result.failure(Exception(response))
+            }
+        }
+    }
+
+    data object Censor : AiModule() {
+
+        private suspend fun censoringRequest(
+            request: String
+        ): Result<Results> {
+            val response = aiClient.post {
+                url(chatModeration7)
+                setBody(AiRequest(request))
+            }
+            println(response.bodyAsText())
+            return response.toResult()
+        }
+
+        suspend fun ReviewDto.allowed(): Result<String> {
+            val review = this
+            if (review.comment.isNullOrEmpty()) return Result.failure(Exception("Comment is empty"))
+            val censor = censoringRequest(
+                request = review.comment.toString()
+            )
+            logger.info("Censoring result: ${review.comment}")
+            val body =
+                censor.getOrThrow() // ?: return Result.failure(Exception("Call Failure ${censor.exceptionOrNull()?.localizedMessage} ; ${censor.exceptionOrNull()?.cause?.localizedMessage} ; ${censor.exceptionOrNull().toString()}"))
+            return if (!body.flagged!!) {
+                logger.info("Censoring result: ${body.flagged}")
+                logger.info("Censoring result: ${body.categories}")
+                logger.info("Censoring result: ${body.categoryScores}")
+                Result.success("Ok")
+            } else {
+                logger.info("Censoring result: ${body.flagged}")
+                logger.info("Censoring result: ${body.categories}")
+                logger.info("Censoring result: ${body.categoryScores}")
+                with(body.categories) {
+                    Result.failure(
+                        when {
+                            sexual -> Exception("Найди себе девушку, хз...\n Отказано: сексуальный контент (01)")
+                            hate -> Exception("Я щас блять покажу тебе как материться нахуй. Придурок, блть\n Отказано: ругань/хейт (02)")
+                            harassment -> Exception("Без херасмента тут!\n Отказано: харассмент (03)")
+                            selfHarm -> Exception("Не надо так\n Отказано: селф-харм (04)")
+                            sexualMinors -> Exception("Ну это уже слишком\n Отказано: сексуальный контент (05)")
+                            hateThreatening -> Exception("Не угрожай, пожалуйста. Я ж тебя забаню\n Отказано: угрозы (06)")
+                            violenceGraphic -> Exception("Отказано: насилие (07)")
+                            selfHarmIntent -> Exception("Не надо так\n Отказано: селф-харм (08)")
+                            selfHarmInstructions -> Exception("Не надо так\n Отказано: селф-харм (09)")
+                            harassmentThreatening -> Exception("Не угрожай, пожалуйста. Я ж тебя забаню\n Отказано: угрозы (10)")
+                            violence -> Exception("Мы за мир без насилия!\n Отказано: насилие (11)")
+                            else -> Exception("Unknown (12)")
+                        }
+                    )
+                }
+            }
+        }
+    }
+}

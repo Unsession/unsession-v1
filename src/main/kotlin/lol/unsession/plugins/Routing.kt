@@ -17,6 +17,7 @@ import io.ktor.util.logging.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import lol.unsession.Utils
+import lol.unsession.ai.AiModule.Censor.allowed
 import lol.unsession.db.Repository
 import lol.unsession.db.Repository.HolyTestObject.generateTestData
 import lol.unsession.db.models.Paging
@@ -158,10 +159,16 @@ fun Application.configureRouting() {
                 }
                 route("/reviews") {
                     post("/create") {
+                        try {
                         verify(Teachers, TeachersReviewing)
                         val userData = call.getUserDataFromToken()
                         val newReview =
-                            call.receive<ReviewDto>()
+                            call.receiveNullable<ReviewDto>() ?: return@post call.respond(HttpStatusCode.BadRequest)
+                        val censor = newReview.allowed()
+                        if (censor.isFailure) {
+                            call.respond(HttpStatusCode.Forbidden, censor.exceptionOrNull()!!.message!!)
+                            return@post
+                        }
                         val serverReview = newReview.copy(
                             id = null,
                             userId = userData.id,
@@ -173,6 +180,10 @@ fun Application.configureRouting() {
                             call.respond(HttpStatusCode.OK)
                         } else {
                             call.respond(HttpStatusCode.NotModified)
+                        }
+                    } catch (e: Exception) {
+                        logger.error(e)
+                            call.respond(HttpStatusCode.InternalServerError, e.localizedMessage)
                         }
                     }
                     get("/get") {
@@ -278,7 +289,10 @@ fun Application.configureRouting() {
                     val role =
                         call.request.queryParameters["role"] ?: return@get call.respond(HttpStatusCode.BadRequest)
                     if (role == Roles.Superuser.name) {
-                        call.respond(HttpStatusCode.Forbidden, "Only via direct database access. This incident will be reported.")
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            "Only via direct database access. This incident will be reported."
+                        )
                     }
                     if (Repository.Users.setRole(id, role = Roles.valueOf(role))) {
                         call.respond(HttpStatusCode.OK)

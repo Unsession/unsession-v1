@@ -6,7 +6,7 @@ import org.jetbrains.exposed.sql.Database
 fun configureDatabases() {
     val database = Database.connect(
         url = "jdbc:postgresql://localhost:5432/unsession",
-        user = "vlad",
+        user = System.getenv("DB_USER"),
         driver = "org.postgresql.Driver",
         password = System.getenv("DB_PASSWORD")
     )
@@ -16,7 +16,7 @@ fun configureDatabases() {
 fun configureDatabasesLocalhost() {
     val database = Database.connect(
         url = "jdbc:postgresql://localhost:5432/unsession",
-        user = "postgres",
+        user = System.getenv("DB_USER"),
         driver = "org.postgresql.Driver",
         password = System.getenv("DB_PASSWORD")
     )
