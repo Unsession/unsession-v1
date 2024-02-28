@@ -19,7 +19,7 @@ class UnsessionSchema(private val database: Database) {
         val id = integer("id").autoIncrement("users_id_seq").uniqueIndex()
         val username = varchar("username", 64)
         val email = varchar("email", 64).check {
-            it like "%@niuitmo.ru" or (it like "%@itmo.ru")
+            it like "%@niuitmo.ru" or (it like "%@itmo.ru") or (it like "%@edu.itmo.ru")
         }
 
         val password = varchar("hash", 128)
@@ -133,7 +133,7 @@ class UnsessionSchema(private val database: Database) {
             integer("id").autoIncrement().check("check_global_person_id") { it lessEq 999999 and (it greaterEq 100000) }
                 .uniqueIndex("global_person_id")
         val name = varchar("full_name", 256)
-        val email = varchar("email", 64).check { it like "%@niuitmo.ru" or (it like "%@itmo.ru") }
+        val email = varchar("email", 64)//.check { it like "%@niuitmo.ru" or (it like "%@itmo.ru") }
             .nullable()
         val department = varchar("department", 128)
 

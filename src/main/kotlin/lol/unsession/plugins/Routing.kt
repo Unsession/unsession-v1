@@ -17,7 +17,6 @@ import io.ktor.util.logging.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import lol.unsession.Utils
-import lol.unsession.ai.AiModule.Censor.allowed
 import lol.unsession.db.Repository
 import lol.unsession.db.Repository.HolyTestObject.generateTestData
 import lol.unsession.db.models.Paging
@@ -164,11 +163,11 @@ fun Application.configureRouting() {
                         val userData = call.getUserDataFromToken()
                         val newReview =
                             call.receiveNullable<ReviewDto>() ?: return@post call.respond(HttpStatusCode.BadRequest)
-                        val censor = newReview.allowed()
-                        if (censor.isFailure) {
-                            call.respond(HttpStatusCode.Forbidden, censor.exceptionOrNull()!!.message!!)
-                            return@post
-                        }
+                        //val censor = newReview.allowed()
+                        //if (censor.isFailure) {
+                        //    call.respond(HttpStatusCode.Forbidden, censor.exceptionOrNull()!!.message!!)
+                        //    return@post
+                        //}
                         val serverReview = newReview.copy(
                             id = null,
                             userId = userData.id,
@@ -288,15 +287,25 @@ fun Application.configureRouting() {
                     )
                     val role =
                         call.request.queryParameters["role"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-                    if (role == Roles.Superuser.name) {
+                    var newRole = Roles.Banned
+                    val myRole = Roles.valueOf(Repository.Users.getUser(call.getUserDataFromToken().id)?.roleName!!)
+                    try {
+                        newRole = Roles.valueOf(role)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.BadRequest, "Invalid role")
+                    }
+                    if (newRole == Roles.Superuser) {
                         call.respond(
                             HttpStatusCode.Forbidden,
                             "Only via direct database access. This incident will be reported."
                         )
                     }
-                    if (Repository.Users.setRole(id, role = Roles.valueOf(role))) {
-                        call.respond(HttpStatusCode.OK)
+                    if (myRole.ordinal < newRole.ordinal) {
+                        call.respond(HttpStatusCode.Forbidden, "You can't set role higher than yours ${myRole.name}(${myRole.ordinal})")
+                    }
+                    if (Repository.Users.setRole(id, role = newRole)) {
                         logger.debug("Set role for user $id to $role")
+                        call.respond(HttpStatusCode.OK)
                     } else {
                         logger.debug("Failed to set role for user $id to $role")
                         call.respond(HttpStatusCode.BadRequest)

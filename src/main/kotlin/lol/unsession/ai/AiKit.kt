@@ -84,17 +84,17 @@ sealed class AiModule {
                 with(body.categories) {
                     Result.failure(
                         when {
-                            sexual -> Exception("Найди себе девушку, хз...\n Отказано: сексуальный контент (01)")
-                            hate -> Exception("Я щас блять покажу тебе как материться нахуй. Придурок, блть\n Отказано: ругань/хейт (02)")
-                            harassment -> Exception("Без херасмента тут!\n Отказано: харассмент (03)")
-                            selfHarm -> Exception("Не надо так\n Отказано: селф-харм (04)")
-                            sexualMinors -> Exception("Ну это уже слишком\n Отказано: сексуальный контент (05)")
-                            hateThreatening -> Exception("Не угрожай, пожалуйста. Я ж тебя забаню\n Отказано: угрозы (06)")
+                            sexual -> Exception("Найди себе девушку, хз...\nОтказано: сексуальный контент (01)")
+                            hate -> Exception("Я щас блять покажу тебе как материться нахуй. Придурок, блть\nОтказано: ругань/хейт (02)")
+                            harassment -> Exception("Без херасмента тут!\nОтказано: харассмент (03)")
+                            selfHarm -> Exception("Не надо так\nОтказано: селф-харм (04)")
+                            sexualMinors -> Exception("Ну это уже слишком\nОтказано: сексуальный контент (05)")
+                            hateThreatening -> Exception("Не угрожай, пожалуйста. Я ж тебя забаню\nОтказано: угрозы (06)")
                             violenceGraphic -> Exception("Отказано: насилие (07)")
-                            selfHarmIntent -> Exception("Не надо так\n Отказано: селф-харм (08)")
-                            selfHarmInstructions -> Exception("Не надо так\n Отказано: селф-харм (09)")
-                            harassmentThreatening -> Exception("Не угрожай, пожалуйста. Я ж тебя забаню\n Отказано: угрозы (10)")
-                            violence -> Exception("Мы за мир без насилия!\n Отказано: насилие (11)")
+                            selfHarmIntent -> Exception("Не надо так\nОтказано: селф-харм (08)")
+                            selfHarmInstructions -> Exception("Не надо так\nОтказано: селф-харм (09)")
+                            harassmentThreatening -> Exception("Не угрожай, пожалуйста. Я ж тебя забаню\nОтказано: угрозы (10)")
+                            violence -> Exception("Мы за мир без насилия!\nОтказано: насилие (11)")
                             else -> Exception("Unknown (12)")
                         }
                     )

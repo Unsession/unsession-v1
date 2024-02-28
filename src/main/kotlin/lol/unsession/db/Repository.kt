@@ -287,9 +287,9 @@ sealed class Repository {
                 UnsessionSchema.Users.selectAll()
                     .limit(paging.size, (paging.page * paging.size).toLong())
                     .map {
-                    val permissions = UsersPermissions.getPermissions(it[id])
-                    UnsessionSchema.Users.fromRow(it, permissions).toUser()
-                }
+                        val permissions = UsersPermissions.getPermissions(it[id])
+                        UnsessionSchema.Users.fromRow(it, permissions).toUser()
+                    }
             }
         }
 
@@ -415,7 +415,12 @@ sealed class Repository {
     object Global {
         fun dropDatabase() {
             transaction {
-                SchemaUtils.dropDatabase("unsession")
+                exec(
+                    """
+                DROP SCHEMA public CASCADE;
+                CREATE SCHEMA public;
+            """.trimIndent()
+                )
             }
         }
     }
