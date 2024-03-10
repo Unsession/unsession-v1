@@ -10,10 +10,11 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
 import io.ktor.server.testing.*
-import io.ktor.util.pipeline.*
-import lol.unsession.security.user.User
+import lol.unsession.features.application.*
+import lol.unsession.features.db.configureDatabases
+import lol.unsession.features.security.configureSecurity
+import lol.unsession.features.user.User
 import lol.unsession.test.TestSDK
 
 fun main() = testApplication {
@@ -22,7 +23,7 @@ fun main() = testApplication {
         configureMonitoring()
         configureSerialization()
         configureDatabases()
-        configureAdministration()
+        // configureAdministration()
         configureSecurity()
         configureRouting()
     }
