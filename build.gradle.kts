@@ -37,6 +37,7 @@ application {
 
 repositories {
     mavenCentral()
+    maven(url = "https://maven.tokend.io")
 }
 
 dependencies {
@@ -87,7 +88,7 @@ dependencies {
     implementation("org.ton:ton-kotlin-tvm:0.3.1")
     implementation("org.ton:ton-kotlin-adnl:0.3.1")
     implementation("org.ton:ton-kotlin-liteclient:0.3.1")
-    implementation("com.muquit.libsodiumjna:libsodium-jna:1.0.4")
+    implementation("com.diglol.crypto:pkc:0.2.0")
 
     testImplementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
     testImplementation("org.jetbrains.exposed:exposed-core:$exposed_version")
