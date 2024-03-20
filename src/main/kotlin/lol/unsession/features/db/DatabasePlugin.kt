@@ -1,11 +1,13 @@
 package lol.unsession.features.db
 
-import lol.unsession.features.db.UnsessionSchema
+import io.ktor.server.application.*
 import org.jetbrains.exposed.sql.Database
 
-fun configureDatabases() {
+fun Application.configureDatabases() {
     val database = Database.connect(
-        url = "jdbc:postgresql://localhost:5432/unsession",
+        url = "jdbc:postgresql://${
+            if (System.getenv("localhost") == "true") "51.250.13.148" else "localhost"
+        }:5432/unsession",
         user = System.getenv("DB_USER"),
         driver = "org.postgresql.Driver",
         password = System.getenv("DB_PASSWORD")

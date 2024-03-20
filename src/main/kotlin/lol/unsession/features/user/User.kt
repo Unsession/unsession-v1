@@ -3,7 +3,7 @@ package lol.unsession.features.user
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import lol.unsession.features.db.UnsessionSchema
-import lol.unsession.features.security.Access
+import lol.unsession.features.security.roles.Access
 import lol.unsession.models.UserDto
 import org.jetbrains.exposed.sql.ResultRow
 

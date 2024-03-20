@@ -1,4 +1,4 @@
-package lol.unsession.features.application
+package lol.unsession.application
 
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.http.*
@@ -18,8 +18,8 @@ import kotlinx.serialization.Serializable
 import lol.unsession.Utils
 import lol.unsession.features.db.Repository
 import lol.unsession.features.db.Repository.HolyTestObject.generateTestData
-import lol.unsession.features.security.Access.*
 import lol.unsession.features.security.getUserDataFromToken
+import lol.unsession.features.security.roles.Access.*
 import lol.unsession.features.security.verify
 import lol.unsession.features.user.User
 import lol.unsession.getResourceUri

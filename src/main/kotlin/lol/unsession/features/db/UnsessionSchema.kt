@@ -6,7 +6,7 @@ import lol.unsession.features.db.UnsessionSchema.Companion.dbQuery
 import lol.unsession.models.ReviewDto
 import lol.unsession.models.TeacherDto
 import lol.unsession.models.UserDto
-import lol.unsession.features.security.Access
+import lol.unsession.features.security.roles.Access
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq

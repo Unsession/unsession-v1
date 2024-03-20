@@ -1,13 +1,13 @@
-package lol.unsession.features.application
+package lol.unsession.application
 
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import lol.unsession.features.db.Repository
-import lol.unsession.features.security.Access
-import lol.unsession.features.security.Roles
 import lol.unsession.features.security.getUserDataFromToken
+import lol.unsession.features.security.roles.Access
+import lol.unsession.features.security.roles.Roles
 import lol.unsession.features.security.verify
 import lol.unsession.models.Paging
 import java.io.File

@@ -1,8 +1,9 @@
-package lol.unsession.features.application
+package lol.unsession.application
 
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import lol.unsession.features.blockchain.auth.configureBlockchain
 import lol.unsession.features.db.configureDatabases
 import lol.unsession.features.security.configureSecurity
 
@@ -25,4 +26,7 @@ fun Application.module() {
     configureDatabases()
     configureSecurity()
     configureRouting()
+
+    configureAdminRouting()
+    configureBlockchain()
 }

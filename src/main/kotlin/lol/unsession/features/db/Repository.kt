@@ -13,8 +13,8 @@ import lol.unsession.models.TeacherDto
 import lol.unsession.models.UserDto
 import lol.unsession.models.UserDto.Companion.toUser
 import lol.unsession.models.client.Review
-import lol.unsession.features.application.logger
-import lol.unsession.features.security.Roles
+import lol.unsession.application.logger
+import lol.unsession.features.security.roles.Roles
 import lol.unsession.features.user.User
 import lol.unsession.features.security.Crypto
 import lol.unsession.test.TestSDK

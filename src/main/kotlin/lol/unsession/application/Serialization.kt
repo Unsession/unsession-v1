@@ -1,4 +1,4 @@
-package lol.unsession.features.application
+package lol.unsession.application
 
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*

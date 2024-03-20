@@ -13,17 +13,17 @@ plugins {
     id("io.ktor.plugin") version "2.3.7"
 }
 
-ktor {
-    fatJar {
-        archiveFileName.set("unsessionhost.jar")
-    }
-}
+//ktor {
+//    fatJar {
+//        archiveFileName.set("unsessionhost.jar")
+//    }
+//}
 
 group = "lol.unsession"
 version = "0.0.1"
 
 application {
-    mainClass.set("lol.unsession.ApplicationKt")
+    mainClass.set("lol.unsession.application.ApplicationKt")
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
@@ -32,6 +32,8 @@ application {
         useJUnitPlatform { }
     }
 }
+
+
 
 repositories {
     mavenCentral()
@@ -80,6 +82,12 @@ dependencies {
     implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.0.0-beta-1")
     implementation ("com.google.code.gson:gson:2.10.1")
+
+    implementation("org.ton:ton-kotlin-crypto:0.3.1")
+    implementation("org.ton:ton-kotlin-tvm:0.3.1")
+    implementation("org.ton:ton-kotlin-adnl:0.3.1")
+    implementation("org.ton:ton-kotlin-liteclient:0.3.1")
+    implementation("com.muquit.libsodiumjna:libsodium-jna:1.0.4")
 
     testImplementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
     testImplementation("org.jetbrains.exposed:exposed-core:$exposed_version")

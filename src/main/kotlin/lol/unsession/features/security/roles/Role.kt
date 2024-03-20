@@ -1,6 +1,6 @@
-package lol.unsession.features.security
+package lol.unsession.features.security.roles
 
-import lol.unsession.features.security.Access.*
+import lol.unsession.features.security.roles.Access.*
 
 data class AccountRole(
     val name: String,

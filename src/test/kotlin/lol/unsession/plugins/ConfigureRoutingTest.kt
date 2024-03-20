@@ -11,7 +11,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
-import lol.unsession.features.application.*
+import lol.unsession.application.*
 import lol.unsession.features.db.configureDatabases
 import lol.unsession.features.security.configureSecurity
 import lol.unsession.features.user.User
