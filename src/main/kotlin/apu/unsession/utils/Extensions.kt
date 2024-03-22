@@ -49,3 +49,7 @@ fun Application.env(name: String): ApplicationConfigValue {
 fun getResourceUri(path: String): URL {
     return Application::class.java.getResource(path)?: throw FileNotFoundException("Resource not found: $path")
 }
+
+fun randSelect(vararg values: String): String {
+    return values.random()
+}
