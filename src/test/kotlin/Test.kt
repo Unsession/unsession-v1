@@ -1,6 +1,6 @@
 import io.kotlintest.matchers.boolean.shouldBeFalse
 import io.kotlintest.matchers.boolean.shouldBeTrue
-import lol.unsession.features.security.Crypto
+import apu.unsession.features.security.Crypto
 
 fun main() {
     testCrypto()
