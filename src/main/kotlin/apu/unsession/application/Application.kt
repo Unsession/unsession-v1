@@ -1,13 +1,13 @@
 package apu.unsession.application
 
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 import apu.unsession.features.blockchain.auth.configureBlockchain
 import apu.unsession.features.db.configureDatabases
 import apu.unsession.features.security.configureSecurity
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
 
-// http://51.250.13.148:7575/
+// http://51.250.13.148:7575
 
 fun main() {
     embeddedServer(
