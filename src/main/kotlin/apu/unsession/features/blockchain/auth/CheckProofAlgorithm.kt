@@ -1,6 +1,6 @@
 package apu.unsession.features.blockchain.auth
 
-import apu.unsession.http.clientTonApi
+import apu.unsession.features.http.clientTonApi
 import apu.unsession.utils.getLogger
 import diglol.crypto.Ed25519
 import io.ktor.client.call.*
@@ -9,6 +9,7 @@ import io.ktor.util.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
+import java.util.*
 
 object CheckProofAlgorithm {
     const val tonProofPrefix = "ton-proof-item-v2/"
@@ -40,7 +41,7 @@ object CheckProofAlgorithm {
     }
 
     private suspend fun verifyPayload(message: TonConnectMessage, pubKey: ByteArray): Boolean {
-        return Ed25519.verify(message.signature, pubKey, constructFullMessage(message))
+        return Ed25519.verify(Base64.getDecoder().decode(message.signature), pubKey, constructFullMessage(message))
     }
 
     private suspend fun getPublicKey(address: String): String? {

@@ -19,11 +19,11 @@ plugins {
 //    }
 //}
 
-group = "lol.unsession"
+group = "apu.unsession"
 version = "0.0.1"
 
 application {
-    mainClass.set("lol.unsession.application.ApplicationKt")
+    mainClass.set("apu.unsession.application.ApplicationKt")
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
