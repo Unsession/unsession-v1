@@ -26,7 +26,6 @@ fun Application.module() {
     configureDatabases()
     configureSecurity()
     configureRouting()
-
     configureAdminRouting()
     configureBlockchain()
 }

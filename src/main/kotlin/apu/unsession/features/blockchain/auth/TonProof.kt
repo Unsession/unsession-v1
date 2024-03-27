@@ -8,7 +8,9 @@ import java.util.*
 data class Proof(val payload: String) {
     companion object {
         fun generateV2(): Proof {
-            return Proof(sha256("UnsessionDApp.${System.currentTimeMillis()}.".toByteArray(Charsets.UTF_8)).toString())
+            val proof = Proof(sha256("UnsessionDApp.${System.currentTimeMillis()}.".toByteArray(Charsets.UTF_8)).toString())
+
+            return proof
         }
     }
 }

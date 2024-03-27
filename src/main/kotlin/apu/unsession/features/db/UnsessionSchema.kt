@@ -234,6 +234,12 @@ class UnsessionSchema(private val database: Database) {
         override val primaryKey = PrimaryKey(id)
     }
 
+    object Payloads : Table() {
+        val id = integer("seqno")
+
+        val payload = 
+    }
+
     init {
         initial()
     }

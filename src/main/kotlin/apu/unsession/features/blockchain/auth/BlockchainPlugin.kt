@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalSerializationApi::class)
-
 package apu.unsession.features.blockchain.auth
 
 import apu.unsession.application.logger
@@ -10,7 +8,6 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.ExperimentalSerializationApi
-
 
 fun Application.configureBlockchain() {
     routing {
